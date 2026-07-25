@@ -268,6 +268,7 @@ export const processPolygonFile = createAppAsyncThunk(
 
     return {
       ...result,
+      originalModels: structuredClone(result.models),
       polygonBufferKey: globalBuffers.add(polygonBuffer)
     };
   }
@@ -613,6 +614,7 @@ export const processTextureFile = createAppAsyncThunk(
         type: processPolygonFile.fulfilled.type,
         payload: {
           models: [],
+          originalModels: [],
           fileName: undefined,
           polygonBufferKey: undefined,
           textureDefs,

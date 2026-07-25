@@ -10,6 +10,7 @@ import {
   downloadModelDataPatch,
   downloadTextureFile
 } from '@/modules/model-data';
+import { showDialog } from '@/modules/dialogs';
 import {
   selectCanExportTextures,
   selectContentViewMode,
@@ -119,8 +120,18 @@ export default function GuiPanelViewOptions() {
   }, [dispatch]);
 
   const onDownloadPatch = useCallback(() => {
-    dispatch(downloadModelDataPatch());
-  }, [dispatch]);
+    if (hasLoadedTextureFile) {
+      dispatch(showDialog('model-data-patch-export'));
+      return;
+    }
+
+    dispatch(
+      downloadModelDataPatch({
+        textureIndexes: [],
+        onlyChangedVertexColors: false
+      })
+    );
+  }, [dispatch, hasLoadedTextureFile]);
 
   const onSetTextureViewMode = useCallback(
     (_: MouseEvent<HTMLElement>, mode: TextureViewMode | null) => {
@@ -290,7 +301,7 @@ export default function GuiPanelViewOptions() {
           </GuiPanelButton>
         )}
         <GuiPanelButton
-          tooltip='Download the loaded resource and textures as a ModNao patch'
+          tooltip='Download textures and vertex color edits as a ModNao patch into a zip file'
           onClick={onDownloadPatch}
           color='secondary'
           disabled={!resourceAttribs}

@@ -13,11 +13,18 @@ import {
 const downloadModelDataPatch = createAppAsyncThunk(
   'modelData/downloadModelDataPatch',
   async (
-    { textureIndexes }: { textureIndexes: number[] },
+    {
+      textureIndexes,
+      onlyChangedVertexColors
+    }: {
+      textureIndexes: number[];
+      onlyChangedVertexColors: boolean;
+    },
     { dispatch, getState }
   ) => {
     const {
       models,
+      originalModels,
       polygonFileName,
       resourceAttribs,
       textureDefs,
@@ -45,8 +52,21 @@ const downloadModelDataPatch = createAppAsyncThunk(
           !mesh.hasColoredVertices
             ? []
             : mesh.polygons.flatMap((polygon, polygonIndex) =>
-                polygon.vertices.flatMap((vertex, vertexIndex) =>
-                  !vertex.colors
+                polygon.vertices.flatMap((vertex, vertexIndex) => {
+                  const originalColor =
+                    originalModels[modelIndex]?.meshes[meshIndex]?.polygons[
+                      polygonIndex
+                    ]?.vertices[vertexIndex]?.colors;
+                  const isUnchanged =
+                    originalColor &&
+                    vertex.colors?.every(
+                      (channel, channelIndex) =>
+                        Math.round(channel * 0xff) ===
+                        Math.round(originalColor[channelIndex] * 0xff)
+                    );
+
+                  return !vertex.colors ||
+                    (onlyChangedVertexColors && isUnchanged)
                     ? []
                     : [
                         {
@@ -56,8 +76,8 @@ const downloadModelDataPatch = createAppAsyncThunk(
                           vertexIndex,
                           color: vertex.colors
                         }
-                      ]
-                )
+                      ];
+                })
               )
         )
       );

@@ -20,6 +20,7 @@ import {
 
 export const initialModelDataState: ModelDataState = {
   models: [],
+  originalModels: [],
   textureDefs: [],
   loadTexturesState: 'idle',
   exportTextureFileState: 'idle',
@@ -145,6 +146,7 @@ const modelDataSlice = createSlice({
         {
           payload: {
             models,
+            originalModels,
             textureDefs,
             fileName,
             polygonBufferKey,
@@ -153,6 +155,7 @@ const modelDataSlice = createSlice({
         }
       ) => {
         state.models = models;
+        state.originalModels = originalModels;
         state.textureDefs = textureDefs;
         state.resourceAttribs = resourceAttribs;
         state.editedTextures = {};

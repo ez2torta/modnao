@@ -288,6 +288,16 @@ const themes = Object.fromEntries(
             }
           }
         },
+        MuiDialogContent: {
+          styleOverrides: {
+            root: {
+              paddingTop: 'calc(var(--mui-spacing) * 1.5)',
+              paddingBottom: 'calc(var(--mui-spacing) * 1.5)',
+              paddingLeft: 'calc(var(--mui-spacing) * 2.5)',
+              paddingRight: 'calc(var(--mui-spacing) * 2.5)'
+            }
+          }
+        },
         MuiStepLabel: {
           styleOverrides: {
             label: {

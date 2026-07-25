@@ -44,6 +44,7 @@ export type LoadTexturesResultPayload = LoadTexturesBasePayload & {
 
 export type LoadPolygonsResultPayload = {
   models: NLModel[];
+  originalModels: NLModel[];
   textureDefs: NLUITextureDef[];
   fileName: string;
   polygonBufferKey: string;
@@ -53,6 +54,7 @@ export type LoadPolygonsResultPayload = {
 export type LoadPolygonsPayload =
   | {
       models: NLModel[];
+      originalModels: NLModel[];
       textureDefs: NLUITextureDef[];
       fileName: string;
       polygonBufferKey: string;
@@ -60,6 +62,7 @@ export type LoadPolygonsPayload =
     }
   | {
       models: [];
+      originalModels: [];
       textureDefs: NLUITextureDef[];
       fileName: undefined;
       polygonBufferKey: undefined;
@@ -152,6 +155,7 @@ export interface ModelDataPatchManifest {
 
 export interface ModelDataState {
   models: NLModel[];
+  originalModels: NLModel[];
   textureDefs: NLUITextureDef[];
   resourceAttribs: ResourceAttribs | undefined;
   /**

@@ -4,12 +4,14 @@ import { Dialog, DialogContent } from '@mui/material';
 import { FC, useCallback } from 'react';
 import AppInfo from './app-info/AppInfo';
 import { ReplaceTexture } from '@/modules/replace-texture';
+import { ModelDataPatchExportDialog } from '@/modules/model-data';
 import FileSupportInfo from './file-support-info/FileSupportInfo';
 
 const Dialogs: Record<DialogType, FC> = {
   'app-info': AppInfo,
   'replace-texture': ReplaceTexture,
-  'file-support-info': FileSupportInfo
+  'file-support-info': FileSupportInfo,
+  'model-data-patch-export': ModelDataPatchExportDialog
 };
 
 export default function AppDialog() {
