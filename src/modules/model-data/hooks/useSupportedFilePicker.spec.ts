@@ -32,6 +32,46 @@ describe('handleFileInput', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  it('should accept a patch when a polygon file is loaded', async () => {
+    await handleFileInput(
+      getMockFilesWithNames(['stg01.mnp.zip']),
+      onError,
+      dispatch,
+      polygonFilename
+    );
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reject a patch when no polygon file is loaded', async () => {
+    await handleFileInput(
+      getMockFilesWithNames(['stg01.mnp.zip']),
+      onError,
+      dispatch,
+      undefined
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      'Open the POL.BIN model you want to update before importing a patch.'
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('should reject a patch selected with another file', async () => {
+    await handleFileInput(
+      getMockFilesWithNames(['stg01.mnp.zip', 'STG01POL.BIN']),
+      onError,
+      dispatch,
+      polygonFilename
+    );
+
+    expect(onError).toHaveBeenCalledWith(
+      'Choose the patch file by itself. POL.BIN and TEX.BIN files must be loaded first.'
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it('should handle supported sets of files without an error', async () => {
     const restParams = [onError, dispatch, polygonFilename] as const;
 

@@ -1,4 +1,8 @@
+import JSZip from 'jszip';
+import { setupStore } from '@/store';
 import type { ResourceAttribs } from '@/types';
+import loadModelDataPatch from './loadModelDataPatch';
+import { processPolygonFile } from './modelDataThunks';
 import {
   createModelDataPatchManifest,
   default as parseModelDataPatchManifest
@@ -11,8 +15,8 @@ import validateModelDataPatchCompatibility, {
 describe('modelDataPatch', () => {
   const resourceAttribs: ResourceAttribs = {
     game: 'MVC2',
-    name: 'Stage 01',
-    identifier: 'stg01',
+    name: 'Desert Stage (Orange Sky)',
+    identifier: '0x01',
     resourceType: 'mvc2-stage',
     filenamePattern: 'STG01',
     oobReferencable: false,
@@ -37,7 +41,7 @@ describe('modelDataPatch', () => {
       textures: [
         {
           textureIndex: 4,
-          imagePath: 'stg01/textures/4.png',
+          imagePath: 'stg01.mn.4.png',
           width: 64,
           height: 32
         }
@@ -54,7 +58,7 @@ describe('modelDataPatch', () => {
 
   it('rejects invalid extensions, JSON, and versions', () => {
     expect(() => getModelDataPatchPrefix('stg01.zip')).toThrow('.mnp.zip');
-    expect(() => parseModelDataPatchManifest('{')).toThrow('valid JSON');
+    expect(() => parseModelDataPatchManifest('{')).toThrow('damaged');
     expect(() =>
       parseModelDataPatchManifest(
         JSON.stringify({ ...createManifest(), formatVersion: 2 })
@@ -68,8 +72,39 @@ describe('modelDataPatch', () => {
     expect(() =>
       validateModelDataPatchCompatibility(manifest, {
         ...resourceAttribs,
-        identifier: 'stg02'
+        name: 'Factory Stage',
+        identifier: '0x02'
       })
-    ).toThrow('stg01');
+    ).toThrow(
+      'This patch is for Marvel vs Capcom 2: Desert Stage (Orange Sky), but Marvel vs Capcom 2: Factory Stage is currently open.'
+    );
+  });
+
+  it('loads a compatible patch archive for the active polygon resource', async () => {
+    const manifest = createManifest();
+    const zip = new JSZip();
+    zip.file('stg01.mnp.json', JSON.stringify(manifest));
+    const zipBuffer: ArrayBuffer = await zip.generateAsync({
+      type: 'arraybuffer'
+    });
+    const file = new File([zipBuffer], 'stg01.mnp.zip');
+    const store = setupStore();
+
+    store.dispatch({
+      type: processPolygonFile.fulfilled.type,
+      payload: {
+        models: [],
+        originalModels: [],
+        textureDefs: [],
+        fileName: 'STG01POL.BIN',
+        polygonBufferKey: 'polygon-buffer',
+        resourceAttribs
+      }
+    });
+
+    const result = await store.dispatch(loadModelDataPatch(file));
+
+    expect(loadModelDataPatch.fulfilled.match(result)).toBe(true);
+    expect(result.payload).toEqual(manifest);
   });
 });

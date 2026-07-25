@@ -30,11 +30,13 @@ export default function parseModelDataPatchManifest(
   try {
     manifest = JSON.parse(json);
   } catch {
-    throw new Error('Patch manifest is not valid JSON.');
+    throw new Error('This patch file is damaged and cannot be read.');
   }
 
   if (manifest.formatVersion !== MODEL_DATA_PATCH_FORMAT_VERSION) {
-    throw new Error('Patch format version is not supported.');
+    throw new Error(
+      'This patch uses an unsupported format version. Update ModNao or choose a compatible patch.'
+    );
   }
 
   return manifest;

@@ -47,7 +47,7 @@ export default function FileImportArea() {
       <GuiPanelActionButtonRow>
         <GuiPanelButton
           id='select-pol-or-tex-button'
-          tooltip='Select MVC2, CVS1, or CVS2 POL.BIN and/or TEX.BIN files'
+          tooltip='Select supported POL.BIN, TEX.BIN, or .mnp.zip to patch loaded files'
           onClick={openFileSelector}
           sx={{ '&&&': { mb: 0 } }}
         >

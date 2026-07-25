@@ -3,6 +3,7 @@ export * from './modelDataSlice';
 export * from './modelDataThunks';
 export * from './modelDataTypes';
 export { default as downloadModelDataPatch } from './downloadModelDataPatch';
+export { default as loadModelDataPatch } from './loadModelDataPatch';
 export { default as ModelDataPatchExportDialog } from './components/ModelDataPatchExportDialog';
 export { default as TextureColorOptions } from './components/TextureColorOptions';
 export { default as useSupportedFilePicker } from './hooks/useSupportedFilePicker';
