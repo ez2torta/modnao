@@ -316,6 +316,13 @@ export default function GuiPanelViewOptions() {
           </GuiPanelButton>
         )}
         <GuiPanelButton
+          tooltip='Patch export is not implemented yet'
+          color='primary'
+          disabled
+        >
+          Export Patch
+        </GuiPanelButton>
+        <GuiPanelButton
           tooltip='Download all available textures as images in a zip file'
           onClick={onDownloadAllTextureImgs}
           color='secondary'
