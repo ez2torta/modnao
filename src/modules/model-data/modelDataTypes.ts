@@ -115,6 +115,41 @@ export interface ApplySelectedVertexGradientPayload {
   pivotPoint: number;
 }
 
+export interface ModelDataPatchTarget {
+  game: ResourceAttribs['game'];
+  resourceType: ResourceAttribs['resourceType'];
+  identifier: string;
+  polygonMapped: boolean;
+  textureMapped: boolean;
+}
+
+export interface ModelDataPatchVertexColor {
+  modelIndex: number;
+  meshIndex: number;
+  polygonIndex: number;
+  vertexIndex: number;
+  color: NLColorRGBA;
+}
+
+export interface ModelDataPatchTexture {
+  textureIndex: number;
+  imagePath: string;
+  width: number;
+  height: number;
+}
+
+export interface ModelDataPatchManifest {
+  formatVersion: 1;
+  resourcePrefix: string;
+  target: ModelDataPatchTarget;
+  content: {
+    vertexColors: boolean;
+    textures: boolean;
+  };
+  vertexColors: ModelDataPatchVertexColor[];
+  textures: ModelDataPatchTexture[];
+}
+
 export interface ModelDataState {
   models: NLModel[];
   textureDefs: NLUITextureDef[];
