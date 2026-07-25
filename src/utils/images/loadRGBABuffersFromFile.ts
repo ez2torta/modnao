@@ -1,9 +1,10 @@
 import { Image } from 'image-js';
 
 export default async function loadRGBABuffersFromFile(
-  file: File
+  source: File | ArrayBuffer
 ): Promise<[Uint8Array, Uint8Array, number, number]> {
-  const arrayBuffer = await file.arrayBuffer();
+  const arrayBuffer =
+    source instanceof File ? await source.arrayBuffer() : source;
   const image = await Image.load(arrayBuffer);
 
   const translucentBuffer = new Uint8Array(image.getRGBAData());

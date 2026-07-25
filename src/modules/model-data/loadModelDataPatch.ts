@@ -4,6 +4,7 @@ import O from '@/constants/StructOffsets';
 import { showError } from '@/modules/error-messages';
 import { createAppAsyncThunk } from '@/storeTypings';
 import globalBuffers from '@/utils/data/globalBuffers';
+import loadRGBABuffersFromFile from '@/utils/images/loadRGBABuffersFromFile';
 import { writeVertexColorToBuffer } from './modelDataThunks';
 import type { LoadModelDataPatchResult } from './modelDataTypes';
 import parseModelDataPatchManifest from './parseModelDataPatchManifest';
@@ -14,6 +15,10 @@ import validateModelDataPatchCompatibility, {
 
 const PATCH_MODEL_CHANGES_ERROR =
   'Some model changes in this patch could not be applied. Reopen the matching POL.BIN file or get a fresh copy of the patch and try again.';
+const PATCH_TEXTURE_CHANGES_ERROR =
+  'Some textures in this patch could not be applied. Reopen the matching files or get a fresh copy of the patch and try again.';
+const PATCH_RESOURCE_CHANGED_ERROR =
+  'The open model changed while the patch was loading. Open the model and import the patch again.';
 
 const loadModelDataPatch = createAppAsyncThunk(
   'modelData/loadModelDataPatch',
@@ -68,7 +73,8 @@ const loadModelDataPatch = createAppAsyncThunk(
         models,
         polygonBufferKey,
         polygonFileName: currentPolygonFileName,
-        resourceAttribs: currentResourceAttribs
+        resourceAttribs: currentResourceAttribs,
+        textureDefs
       } = getState().modelData;
 
       if (
@@ -76,14 +82,53 @@ const loadModelDataPatch = createAppAsyncThunk(
         !currentResourceAttribs ||
         !polygonBufferKey
       ) {
-        throw new Error(
-          'The open model changed while the patch was loading. Open the model and import the patch again.'
-        );
+        throw new Error(PATCH_RESOURCE_CHANGED_ERROR);
       }
 
       validateModelDataPatchCompatibility(manifest, currentResourceAttribs);
 
       const polygonBuffer = globalBuffers.get(polygonBufferKey);
+      const decodedTextureUpdates = await Promise.all(
+        manifest.textures.map(
+          async ({ textureIndex, imagePath, width, height }) => {
+            const textureDef = textureDefs[textureIndex];
+            const imageEntry = zip.file(imagePath);
+
+            if (
+              !textureDef ||
+              !imageEntry ||
+              textureDef.width !== width ||
+              textureDef.height !== height
+            ) {
+              throw new Error(PATCH_TEXTURE_CHANGES_ERROR);
+            }
+
+            try {
+              const imageBuffer = await imageEntry.async('arraybuffer');
+              const [translucentBuffer, opaqueBuffer, imageWidth, imageHeight] =
+                await loadRGBABuffersFromFile(imageBuffer);
+
+              if (imageWidth !== width || imageHeight !== height) {
+                throw new Error(PATCH_TEXTURE_CHANGES_ERROR);
+              }
+
+              return { textureIndex, translucentBuffer, opaqueBuffer };
+            } catch {
+              throw new Error(PATCH_TEXTURE_CHANGES_ERROR);
+            }
+          }
+        )
+      );
+
+      const currentModelData = getState().modelData;
+
+      if (
+        currentModelData.polygonBufferKey !== polygonBufferKey ||
+        currentModelData.textureDefs !== textureDefs
+      ) {
+        throw new Error(PATCH_RESOURCE_CHANGED_ERROR);
+      }
+
       const vertexColorUpdatesByModel = new Map<
         number,
         Map<number, NLColorRGBA>
@@ -128,6 +173,15 @@ const loadModelDataPatch = createAppAsyncThunk(
           writeVertexColorToBuffer(polygonBuffer, contentAddress, color);
         });
       });
+      const textureUpdates = decodedTextureUpdates.map(
+        ({ textureIndex, translucentBuffer, opaqueBuffer }) => ({
+          textureIndex,
+          bufferKeys: {
+            translucent: globalBuffers.add(translucentBuffer),
+            opaque: globalBuffers.add(opaqueBuffer)
+          }
+        })
+      );
 
       return {
         vertexColorUpdates: Array.from(
@@ -139,7 +193,8 @@ const loadModelDataPatch = createAppAsyncThunk(
               ([contentAddress, color]) => ({ contentAddress, color })
             )
           })
-        )
+        ),
+        textureUpdates
       };
     } catch (error) {
       dispatch(

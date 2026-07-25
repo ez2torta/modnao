@@ -1,8 +1,10 @@
 import JSZip from 'jszip';
+import { Image } from 'image-js';
 import O from '@/constants/StructOffsets';
 import { setupStore } from '@/store';
 import type { ResourceAttribs } from '@/types';
 import globalBuffers from '@/utils/data/globalBuffers';
+import { createTextureDef } from '@/utils/textures';
 import loadModelDataPatch from './loadModelDataPatch';
 import { processPolygonFile } from './modelDataThunks';
 import {
@@ -42,10 +44,10 @@ describe('modelDataPatch', () => {
       ],
       textures: [
         {
-          textureIndex: 4,
-          imagePath: 'stg01.mn.4.png',
-          width: 64,
-          height: 32
+          textureIndex: 0,
+          imagePath: 'stg01.mn.0.png',
+          width: 1,
+          height: 1
         }
       ]
     });
@@ -90,6 +92,12 @@ describe('modelDataPatch', () => {
     const manifest = createManifest();
     const zip = new JSZip();
     zip.file('stg01.mnp.json', JSON.stringify(manifest));
+    const texturePixels = new Uint8Array([255, 128, 0, 64]);
+    const textureImage = new Image(1, 1, texturePixels, {
+      components: 3,
+      alpha: 1
+    });
+    zip.file('stg01.mn.0.png', textureImage.toBuffer({ format: 'png' }));
     const zipBuffer: ArrayBuffer = await zip.generateAsync({
       type: 'arraybuffer'
     });
@@ -179,13 +187,29 @@ describe('modelDataPatch', () => {
     const models = [createModel()];
     const originalModels = [createModel()];
     const polygonBufferKey = globalBuffers.add(new Uint8Array(64));
+    const originalTranslucentBufferKey = globalBuffers.add(
+      new Uint8Array([0, 0, 0, 0])
+    );
+    const originalOpaqueBufferKey = globalBuffers.add(
+      new Uint8Array([0, 0, 0, 255])
+    );
+    const textureDefs = [
+      createTextureDef({
+        width: 1,
+        height: 1,
+        bufferKeys: {
+          translucent: originalTranslucentBufferKey,
+          opaque: originalOpaqueBufferKey
+        }
+      })
+    ];
 
     store.dispatch({
       type: processPolygonFile.fulfilled.type,
       payload: {
         models,
         originalModels,
-        textureDefs: [],
+        textureDefs,
         fileName: 'STG01POL.BIN',
         polygonBufferKey,
         resourceAttribs
@@ -209,5 +233,24 @@ describe('modelDataPatch', () => {
         globalBuffers.get(polygonBufferKey).slice(colorOffset, colorOffset + 4)
       )
     ).toEqual([0, 128, 255, 64]);
+    expect(
+      Array.from(
+        globalBuffers.get(state.textureDefs[0].bufferKeys.translucent ?? '')
+      )
+    ).toEqual(Array.from(texturePixels));
+    expect(
+      Array.from(
+        globalBuffers.get(state.textureDefs[0].bufferKeys.opaque ?? '')
+      )
+    ).toEqual([255, 128, 0, 255]);
+    expect(state.textureHistory[0]).toEqual([
+      {
+        bufferKeys: {
+          translucent: originalTranslucentBufferKey,
+          opaque: originalOpaqueBufferKey
+        }
+      }
+    ]);
+    expect(state.hasEditedTextures).toBe(true);
   });
 });

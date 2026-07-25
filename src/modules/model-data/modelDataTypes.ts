@@ -105,8 +105,14 @@ export interface ApplySelectedVertexColorResult {
   vertexColorUpdates: VertexColorUpdate[];
 }
 
+export interface ModelDataPatchTextureUpdate {
+  textureIndex: number;
+  bufferKeys: TextureImageBufferKeys;
+}
+
 export interface LoadModelDataPatchResult {
   vertexColorUpdates: ApplySelectedVertexColorResult[];
+  textureUpdates: ModelDataPatchTextureUpdate[];
 }
 
 export interface ApplySelectedVertexHslPayload {
