@@ -4,6 +4,7 @@ import { TextureImageBufferKeys } from '@/utils/textures/TextureImageBufferKeys'
 import {
   ApplySelectedVertexColorResult,
   LoadTexturesResultPayload,
+  ModelDataPatchTextureUpdate,
   ModelDataState,
   TextureHslSession
 } from './modelDataTypes';
@@ -17,9 +18,11 @@ import {
   processPolygonFile,
   processTextureFile
 } from './modelDataThunks';
+import loadModelDataPatch from './loadModelDataPatch';
 
 export const initialModelDataState: ModelDataState = {
   models: [],
+  originalModels: [],
   textureDefs: [],
   loadTexturesState: 'idle',
   exportTextureFileState: 'idle',
@@ -72,32 +75,32 @@ const applySelectedVertexColorFulfilled = (
   });
 };
 
+const replaceTextureImageInState = (
+  state: ModelDataState,
+  { textureIndex, bufferKeys }: ModelDataPatchTextureUpdate
+) => {
+  delete state.editedTextures[textureIndex];
+  delete state.textureHslSessions[textureIndex];
+
+  state.textureHistory[textureIndex] = state.textureHistory[textureIndex] || [];
+  state.textureHistory[textureIndex].push({
+    bufferKeys: state.textureDefs[textureIndex]
+      .bufferKeys as TextureImageBufferKeys
+  });
+
+  state.textureDefs[textureIndex].bufferKeys = bufferKeys;
+  state.hasEditedTextures = true;
+};
+
 const modelDataSlice = createSlice({
   name: 'modelData',
   initialState: initialModelDataState,
   reducers: {
     replaceTextureImage(
       state,
-      {
-        payload: { textureIndex, bufferKeys }
-      }: PayloadAction<{
-        textureIndex: number;
-        bufferKeys: TextureImageBufferKeys;
-      }>
+      { payload }: PayloadAction<ModelDataPatchTextureUpdate>
     ) {
-      // clear previous edited texture when replacing a texture image
-      delete state.editedTextures[textureIndex];
-      delete state.textureHslSessions[textureIndex];
-
-      state.textureHistory[textureIndex] =
-        state.textureHistory[textureIndex] || [];
-      state.textureHistory[textureIndex].push({
-        bufferKeys: state.textureDefs[textureIndex]
-          .bufferKeys as TextureImageBufferKeys
-      });
-
-      state.textureDefs[textureIndex].bufferKeys = bufferKeys;
-      state.hasEditedTextures = true;
+      replaceTextureImageInState(state, payload);
     },
 
     revertTextureImage(
@@ -145,6 +148,7 @@ const modelDataSlice = createSlice({
         {
           payload: {
             models,
+            originalModels,
             textureDefs,
             fileName,
             polygonBufferKey,
@@ -153,6 +157,7 @@ const modelDataSlice = createSlice({
         }
       ) => {
         state.models = models;
+        state.originalModels = originalModels;
         state.textureDefs = textureDefs;
         state.resourceAttribs = resourceAttribs;
         state.editedTextures = {};
@@ -247,6 +252,17 @@ const modelDataSlice = createSlice({
       applySelectedVertexGradient.fulfilled,
       applySelectedVertexColorFulfilled
     );
+
+    builder.addCase(loadModelDataPatch.fulfilled, (state, { payload }) => {
+      payload?.vertexColorUpdates.forEach((vertexColorUpdate) => {
+        applySelectedVertexColorFulfilled(state, {
+          payload: vertexColorUpdate
+        });
+      });
+      payload?.textureUpdates.forEach((textureUpdate) => {
+        replaceTextureImageInState(state, textureUpdate);
+      });
+    });
 
     builder.addCase(
       processAdjustedTextureHsl.fulfilled,

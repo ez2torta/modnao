@@ -83,7 +83,7 @@ const hexToNormalizedColor = (hexColor: string): NLColor | undefined => {
 const normalizedColorChannelToByte = (channel: number) =>
   Math.round(Math.min(Math.max(channel, 0), 1) * 0xff);
 
-const writeVertexColorToBuffer = (
+export const writeVertexColorToBuffer = (
   polygonBuffer: Uint8Array,
   contentAddress: number,
   color: NLColorRGBA
@@ -268,6 +268,7 @@ export const processPolygonFile = createAppAsyncThunk(
 
     return {
       ...result,
+      originalModels: structuredClone(result.models),
       polygonBufferKey: globalBuffers.add(polygonBuffer)
     };
   }
@@ -613,6 +614,7 @@ export const processTextureFile = createAppAsyncThunk(
         type: processPolygonFile.fulfilled.type,
         payload: {
           models: [],
+          originalModels: [],
           fileName: undefined,
           polygonBufferKey: undefined,
           textureDefs,

@@ -44,6 +44,7 @@ export type LoadTexturesResultPayload = LoadTexturesBasePayload & {
 
 export type LoadPolygonsResultPayload = {
   models: NLModel[];
+  originalModels: NLModel[];
   textureDefs: NLUITextureDef[];
   fileName: string;
   polygonBufferKey: string;
@@ -53,6 +54,7 @@ export type LoadPolygonsResultPayload = {
 export type LoadPolygonsPayload =
   | {
       models: NLModel[];
+      originalModels: NLModel[];
       textureDefs: NLUITextureDef[];
       fileName: string;
       polygonBufferKey: string;
@@ -60,6 +62,7 @@ export type LoadPolygonsPayload =
     }
   | {
       models: [];
+      originalModels: [];
       textureDefs: NLUITextureDef[];
       fileName: undefined;
       polygonBufferKey: undefined;
@@ -102,6 +105,16 @@ export interface ApplySelectedVertexColorResult {
   vertexColorUpdates: VertexColorUpdate[];
 }
 
+export interface ModelDataPatchTextureUpdate {
+  textureIndex: number;
+  bufferKeys: TextureImageBufferKeys;
+}
+
+export interface LoadModelDataPatchResult {
+  vertexColorUpdates: ApplySelectedVertexColorResult[];
+  textureUpdates: ModelDataPatchTextureUpdate[];
+}
+
 export interface ApplySelectedVertexHslPayload {
   baseVertexColors: VertexColorUpdate[];
   hsl: HslValues;
@@ -115,8 +128,44 @@ export interface ApplySelectedVertexGradientPayload {
   pivotPoint: number;
 }
 
+export interface ModelDataPatchTarget {
+  game: ResourceAttribs['game'];
+  resourceType: ResourceAttribs['resourceType'];
+  identifier: string;
+  polygonMapped: boolean;
+  textureMapped: boolean;
+}
+
+export interface ModelDataPatchVertexColor {
+  modelIndex: number;
+  meshIndex: number;
+  polygonIndex: number;
+  vertexIndex: number;
+  color: NLColorRGBA;
+}
+
+export interface ModelDataPatchTexture {
+  textureIndex: number;
+  imagePath: string;
+  width: number;
+  height: number;
+}
+
+export interface ModelDataPatchManifest {
+  formatVersion: 1;
+  resourcePrefix: string;
+  target: ModelDataPatchTarget;
+  content: {
+    vertexColors: boolean;
+    textures: boolean;
+  };
+  vertexColors: ModelDataPatchVertexColor[];
+  textures: ModelDataPatchTexture[];
+}
+
 export interface ModelDataState {
   models: NLModel[];
+  originalModels: NLModel[];
   textureDefs: NLUITextureDef[];
   resourceAttribs: ResourceAttribs | undefined;
   /**

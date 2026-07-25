@@ -4,7 +4,11 @@ import type { SystemStyleObject } from '@mui/system';
 import { castDraft } from 'immer';
 import { HYDRATE } from 'next-redux-wrapper';
 
-export type DialogType = 'app-info' | 'replace-texture' | 'file-support-info';
+export type DialogType =
+  | 'app-info'
+  | 'replace-texture'
+  | 'file-support-info'
+  | 'model-data-patch-export';
 
 export interface ShowDialogPayload {
   type: DialogType;

@@ -5,6 +5,8 @@ import {
   loadPolygonFile,
   loadTextureFile
 } from '../modelDataThunks';
+import loadModelDataPatch from '../loadModelDataPatch';
+import { MODEL_DATA_PATCH_EXTENSION } from '../validateModelDataPatchCompatibility';
 import { useAppDispatch, useAppSelector } from '@/storeTypings';
 import FilesSupportedButton from '@/components/FilesSupportedButton';
 import resourceAttribMappings from '@/constants/resourceAttribMappings';
@@ -33,6 +35,29 @@ export const handleFileInput = async (
   polygonFilename: string | undefined
 ) => {
   if (!files[0]) {
+    return;
+  }
+
+  const patchFile = files.find((file) =>
+    file.name.toLowerCase().endsWith(MODEL_DATA_PATCH_EXTENSION)
+  );
+
+  if (patchFile) {
+    if (files.length > 1) {
+      onError(
+        'Choose the patch file by itself. POL.BIN and TEX.BIN files must be loaded first.'
+      );
+      return;
+    }
+
+    if (!polygonFilename) {
+      onError(
+        'Open the POL.BIN model you want to update before importing a patch.'
+      );
+      return;
+    }
+
+    dispatch(loadModelDataPatch(patchFile));
     return;
   }
 
@@ -200,7 +225,7 @@ export default function useSupportedFilePicker(
   const { plainFiles, openFilePicker } = useFilePicker({
     multiple: true,
     readAs: 'ArrayBuffer',
-    accept: ['.BIN']
+    accept: ['.BIN', MODEL_DATA_PATCH_EXTENSION]
   });
 
   useEffect(() => {

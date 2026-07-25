@@ -89,7 +89,7 @@ export default function GettingStarted({ compact }: GettingStartedProps) {
                     variant='outlined'
                     sx={{ lineHeight: 1, mr: 1 }}
                   >
-                    Import Model/Texture
+                    Import files
                   </Button>
                   {
                     ' to load a polygon and an associated texture file, or just a dedicated texture file by itself. Hold control when clicking to select multiple files.'
@@ -124,9 +124,9 @@ export default function GettingStarted({ compact }: GettingStartedProps) {
                     variant='outlined'
                     sx={{ lineHeight: 1 }}
                   >
-                    Export Textures
+                    Export Texture BIN
                   </Button>
-                  {' to download the updated texture files.'}
+                  {' to download the updated texture BIN file.'}
                 </Typography>
               </StepContent>
             </Step>

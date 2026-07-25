@@ -1,4 +1,8 @@
-import { selectContentViewMode, selectResourceAttribs } from '@/selectors';
+import {
+  selectContentViewMode,
+  selectHasLoadedPolygonFile,
+  selectResourceAttribs
+} from '@/selectors';
 import { useSupportedFilePicker } from '@/modules/model-data';
 import { showError } from '@/modules/error-messages';
 import { setObjectViewedIndex } from '@/modules/object-viewer';
@@ -15,6 +19,7 @@ import GuiPanelActionButtonRow from './GuiPanelActionButtonRow';
 export default function FileImportArea() {
   const dispatch = useAppDispatch();
   const contentViewMode = useAppSelector(selectContentViewMode);
+  const hasLoadedPolygonFile = useAppSelector(selectHasLoadedPolygonFile);
   const resourceAttribs = useAppSelector(selectResourceAttribs);
   const onHandleError = useCallback((message: string | JSX.Element) => {
     dispatch(showError({ title: 'Invalid file selection', message }));
@@ -47,11 +52,15 @@ export default function FileImportArea() {
       <GuiPanelActionButtonRow>
         <GuiPanelButton
           id='select-pol-or-tex-button'
-          tooltip='Select MVC2, CVS1, or CVS2 POL.BIN and/or TEX.BIN files'
+          tooltip={
+            hasLoadedPolygonFile
+              ? 'Select supported POL.BIN, TEX.BIN, or .mnp.zip to patch loaded files'
+              : 'Select supported POL.BIN or TEX.BIN files'
+          }
           onClick={openFileSelector}
           sx={{ '&&&': { mb: 0 } }}
         >
-          Import Model/Texture
+          Import files
         </GuiPanelButton>
 
         <FilesSupportedButton />
