@@ -114,7 +114,7 @@ export default function ModelDataPatchExportDialog() {
         width: '100%'
       }}
     >
-      <Typography variant='h5'>Download Patch</Typography>
+      <Typography variant='h5'>Export Patch</Typography>
       {!hasVertexColors || !hasOriginalModels ? null : (
         <Box sx={{ mt: 1 }}>
           <FormControlLabel
@@ -271,7 +271,7 @@ export default function ModelDataPatchExportDialog() {
           color='primary'
           variant='outlined'
         >
-          Download Patch
+          Export Patch
         </Button>
       </Box>
     </Box>

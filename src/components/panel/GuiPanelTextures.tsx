@@ -297,7 +297,7 @@ export default function GuiPanelViewOptions() {
             onClick={onExportTextureFile}
             color='primary'
           >
-            Export Textures
+            Export Texture BIN
           </GuiPanelButton>
         )}
         <GuiPanelButton
@@ -306,7 +306,7 @@ export default function GuiPanelViewOptions() {
           color='secondary'
           disabled={!resourceAttribs}
         >
-          Download Patch
+          Export Patch
         </GuiPanelButton>
       </GuiPanelActionButtonRow>
     </GuiPanelSection>
