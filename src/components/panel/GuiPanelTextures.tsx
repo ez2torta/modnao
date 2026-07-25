@@ -6,10 +6,10 @@ import {
   useEffect,
   useMemo
 } from 'react';
-import { saveAs } from 'file-saver';
-import dayjs from 'dayjs';
-import JSZip from 'jszip';
-import { downloadTextureFile } from '@/modules/model-data';
+import {
+  downloadModelDataPatch,
+  downloadTextureFile
+} from '@/modules/model-data';
 import {
   selectCanExportTextures,
   selectContentViewMode,
@@ -18,13 +18,13 @@ import {
   selectMeshSelectionType,
   selectModel,
   selectModels,
+  selectResourceAttribs,
   selectSelectedObjectIds,
   selectSelectedTexture,
   selectTextureFileName,
   selectUpdatedTextureDefs
 } from '@/selectors';
 import { useAppDispatch, useAppSelector } from '@/storeTypings';
-import { createB64ImgFromTextureDef } from '@/utils/textures';
 import GuiPanelButton from './GuiPanelButton';
 import GuiPanelTexture from './textures/GuiPanelTexture';
 import {
@@ -59,7 +59,7 @@ export default function GuiPanelViewOptions() {
   const loadTexturesState = useAppSelector(selectLoadTexturesState);
   const hasLoadedTextureFile = useAppSelector(selectHasLoadedTextureFile);
   const models = useAppSelector(selectModels);
-  const textureViewAsTranslucent = textureViewMode === 'transparent';
+  const resourceAttribs = useAppSelector(selectResourceAttribs);
 
   const selectedTextureReferences = useMemo(() => {
     const references = new Map<
@@ -118,6 +118,10 @@ export default function GuiPanelViewOptions() {
     dispatch(downloadTextureFile());
   }, [dispatch]);
 
+  const onDownloadPatch = useCallback(() => {
+    dispatch(downloadModelDataPatch());
+  }, [dispatch]);
+
   const onSetTextureViewMode = useCallback(
     (_: MouseEvent<HTMLElement>, mode: TextureViewMode | null) => {
       if (!mode) {
@@ -128,36 +132,6 @@ export default function GuiPanelViewOptions() {
     },
     [setTextureViewMode]
   );
-
-  const onDownloadAllTextureImgs = useCallback(() => {
-    const zip = new JSZip();
-
-    const imgPromises = textureDefs.map((textureDef) => {
-      const base64 = createB64ImgFromTextureDef({
-        textureDef,
-        asTranslucent: textureViewAsTranslucent
-      }).then((str) => str.replace(/^data:image\/(png|jpeg);base64,/, ''));
-
-      return base64;
-    });
-
-    Promise.all(imgPromises)
-      .then((base64Imgs) => {
-        base64Imgs.forEach((img, i) => {
-          const filename = `${textureFileName?.replace(/.([a-zA-Z0-9]+)$/, '')}.mn.${i}.png`;
-          zip.file(filename, img, { base64: true });
-        });
-
-        return zip.generateAsync({ type: 'blob' });
-      })
-      .then((zipContent) => {
-        const filename = `${textureFileName?.replace(/.([a-zA-Z0-9]+)$/, '')}.`;
-        saveAs(
-          zipContent,
-          `${filename}mn.${dayjs().format('YYMMDDHHmmss')}.zip`
-        );
-      });
-  }, [textureViewAsTranslucent, textureDefs, textureFileName]);
 
   const [textures, offsceneTextures] = useMemo(() => {
     if (loadTexturesState === 'pending') {
@@ -316,18 +290,12 @@ export default function GuiPanelViewOptions() {
           </GuiPanelButton>
         )}
         <GuiPanelButton
-          tooltip='Patch export is not implemented yet'
-          color='primary'
-          disabled
-        >
-          Export Patch
-        </GuiPanelButton>
-        <GuiPanelButton
-          tooltip='Download all available textures as images in a zip file'
-          onClick={onDownloadAllTextureImgs}
+          tooltip='Download the loaded resource and textures as a ModNao patch'
+          onClick={onDownloadPatch}
           color='secondary'
+          disabled={!resourceAttribs}
         >
-          Download All Images
+          Download Patch
         </GuiPanelButton>
       </GuiPanelActionButtonRow>
     </GuiPanelSection>

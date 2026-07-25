@@ -2,6 +2,7 @@ export { default as modelDataSlice } from './modelDataSlice';
 export * from './modelDataSlice';
 export * from './modelDataThunks';
 export * from './modelDataTypes';
+export { default as downloadModelDataPatch } from './downloadModelDataPatch';
 export { default as TextureColorOptions } from './components/TextureColorOptions';
 export { default as useSupportedFilePicker } from './hooks/useSupportedFilePicker';
 export { default as useTextureModelReferences } from './hooks/useTextureModelReferences';
