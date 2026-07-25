@@ -83,7 +83,7 @@ const hexToNormalizedColor = (hexColor: string): NLColor | undefined => {
 const normalizedColorChannelToByte = (channel: number) =>
   Math.round(Math.min(Math.max(channel, 0), 1) * 0xff);
 
-const writeVertexColorToBuffer = (
+export const writeVertexColorToBuffer = (
   polygonBuffer: Uint8Array,
   contentAddress: number,
   color: NLColorRGBA

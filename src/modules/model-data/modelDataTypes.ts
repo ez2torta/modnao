@@ -105,6 +105,10 @@ export interface ApplySelectedVertexColorResult {
   vertexColorUpdates: VertexColorUpdate[];
 }
 
+export interface LoadModelDataPatchResult {
+  vertexColorUpdates: ApplySelectedVertexColorResult[];
+}
+
 export interface ApplySelectedVertexHslPayload {
   baseVertexColors: VertexColorUpdate[];
   hsl: HslValues;

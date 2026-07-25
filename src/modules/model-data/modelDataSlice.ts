@@ -17,6 +17,7 @@ import {
   processPolygonFile,
   processTextureFile
 } from './modelDataThunks';
+import loadModelDataPatch from './loadModelDataPatch';
 
 export const initialModelDataState: ModelDataState = {
   models: [],
@@ -250,6 +251,14 @@ const modelDataSlice = createSlice({
       applySelectedVertexGradient.fulfilled,
       applySelectedVertexColorFulfilled
     );
+
+    builder.addCase(loadModelDataPatch.fulfilled, (state, { payload }) => {
+      payload?.vertexColorUpdates.forEach((vertexColorUpdate) => {
+        applySelectedVertexColorFulfilled(state, {
+          payload: vertexColorUpdate
+        });
+      });
+    });
 
     builder.addCase(
       processAdjustedTextureHsl.fulfilled,

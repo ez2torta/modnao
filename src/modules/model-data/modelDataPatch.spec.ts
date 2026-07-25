@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
+import O from '@/constants/StructOffsets';
 import { setupStore } from '@/store';
 import type { ResourceAttribs } from '@/types';
+import globalBuffers from '@/utils/data/globalBuffers';
 import loadModelDataPatch from './loadModelDataPatch';
 import { processPolygonFile } from './modelDataThunks';
 import {
@@ -32,10 +34,10 @@ describe('modelDataPatch', () => {
       vertexColors: [
         {
           modelIndex: 0,
-          meshIndex: 1,
-          polygonIndex: 2,
-          vertexIndex: 3,
-          color: [1, 0.5, 0, 1]
+          meshIndex: 0,
+          polygonIndex: 0,
+          vertexIndex: 0,
+          color: [1, 0.5, 0, 0.25]
         }
       ],
       textures: [
@@ -47,6 +49,10 @@ describe('modelDataPatch', () => {
         }
       ]
     });
+
+  afterEach(() => {
+    globalBuffers.clear();
+  });
 
   it('generates and parses a versioned combined manifest', () => {
     const manifest = createManifest();
@@ -89,22 +95,119 @@ describe('modelDataPatch', () => {
     });
     const file = new File([zipBuffer], 'stg01.mnp.zip');
     const store = setupStore();
+    const contentAddress = 16;
+    const createVertex = (): NLVertex => ({
+      address: contentAddress,
+      index: 0,
+      position: [0, 0, 0],
+      normals: [0, 0, 0],
+      addressingMode: 'direct',
+      contentModeValue: 0,
+      vertexOffset: 0,
+      contentAddress,
+      uv: [0, 0],
+      colors: [0, 0, 0, 1]
+    });
+    const createModel = (): NLModel => ({
+      address: 0,
+      ramAddress: 0,
+      position: [0, 0, 0],
+      radius: 0,
+      mainBounds: {
+        min: [0, 0, 0],
+        max: [0, 0, 0],
+        center: [0, 0, 0],
+        size: [0, 0, 0],
+        vertexCount: 2,
+        totalVertexCount: 2
+      },
+      totalVertexCount: 2,
+      meshes: [
+        {
+          address: 0,
+          baseParams: 0,
+          textureInstructions: 0,
+          polygons: [
+            {
+              address: 0,
+              flags: {
+                culling: false,
+                cullingType: 'back',
+                spriteQuad: false,
+                strip: false,
+                triangles: true,
+                superVertexIndex: false,
+                gouradShading: false,
+                reuseGlobalParams: false,
+                envMaps: false
+              },
+              vertices: [createVertex(), createVertex()],
+              vertexCount: 2,
+              indices: [],
+              triIndices: [],
+              actualVertexCount: 2,
+              vertexGroupModeValue: 0,
+              vertexGroupMode: 'regular'
+            }
+          ],
+          position: [0, 0, 0],
+          color: [0, 0, 0],
+          alpha: 1,
+          specularColor: [0, 0, 0],
+          specularAlpha: 1,
+          polygonDataLength: 0,
+          textureWrappingValue: 0,
+          textureWrappingFlags: {
+            hFlip: false,
+            vFlip: false,
+            hRepeat: false,
+            vRepeat: false,
+            hStretch: false
+          },
+          textureControlValue: 0,
+          isOpaque: true,
+          vertexColorModeValue: 1,
+          hasColoredVertices: true,
+          textureColorFormat: 'ARGB1555',
+          textureColorFormatValue: 0,
+          textureIndex: 0,
+          textureSizeValue: 0,
+          textureSize: [8, 8]
+        }
+      ]
+    });
+    const models = [createModel()];
+    const originalModels = [createModel()];
+    const polygonBufferKey = globalBuffers.add(new Uint8Array(64));
 
     store.dispatch({
       type: processPolygonFile.fulfilled.type,
       payload: {
-        models: [],
-        originalModels: [],
+        models,
+        originalModels,
         textureDefs: [],
         fileName: 'STG01POL.BIN',
-        polygonBufferKey: 'polygon-buffer',
+        polygonBufferKey,
         resourceAttribs
       }
     });
 
     const result = await store.dispatch(loadModelDataPatch(file));
+    const state = store.getState().modelData;
+    const colorOffset = contentAddress + O.Vertex.COLORS;
 
     expect(loadModelDataPatch.fulfilled.match(result)).toBe(true);
-    expect(result.payload).toEqual(manifest);
+    expect(state.models[0].meshes[0].polygons[0].vertices[0].colors).toEqual([
+      1, 0.5, 0, 0.25
+    ]);
+    expect(state.models[0].meshes[0].polygons[0].vertices[1].colors).toEqual([
+      1, 0.5, 0, 0.25
+    ]);
+    expect(state.originalModels).toEqual(originalModels);
+    expect(
+      Array.from(
+        globalBuffers.get(polygonBufferKey).slice(colorOffset, colorOffset + 4)
+      )
+    ).toEqual([0, 128, 255, 64]);
   });
 });
