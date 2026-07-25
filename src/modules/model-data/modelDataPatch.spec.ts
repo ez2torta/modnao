@@ -33,13 +33,10 @@ describe('modelDataPatch', () => {
     createModelDataPatchManifest({
       resourcePrefix: 'stg01',
       target: getModelDataPatchTarget(resourceAttribs),
-      vertexColors: [
+      entries: [
         {
-          modelIndex: 0,
-          meshIndex: 0,
-          polygonIndex: 0,
-          vertexIndex: 0,
-          color: [1, 0.5, 0, 0.25]
+          type: 'v-color',
+          entry: [0, 0, 0, 0, [1, 0.5, 0, 0.25]]
         }
       ],
       textures: [
@@ -59,19 +56,22 @@ describe('modelDataPatch', () => {
   it('generates and parses a versioned combined manifest', () => {
     const manifest = createManifest();
 
+    expect(manifest.formatVersion).toBe(2);
+    expect(manifest.entries).toEqual([
+      {
+        type: 'v-color',
+        entry: [0, 0, 0, 0, [1, 0.5, 0, 0.25]]
+      }
+    ]);
+    expect(manifest).not.toHaveProperty('vertexColors');
     expect(parseModelDataPatchManifest(JSON.stringify(manifest))).toEqual(
       manifest
     );
   });
 
-  it('rejects invalid extensions, JSON, and versions', () => {
+  it('rejects invalid extensions and JSON', () => {
     expect(() => getModelDataPatchPrefix('stg01.zip')).toThrow('.mnp.zip');
     expect(() => parseModelDataPatchManifest('{')).toThrow('damaged');
-    expect(() =>
-      parseModelDataPatchManifest(
-        JSON.stringify({ ...createManifest(), formatVersion: 2 })
-      )
-    ).toThrow('version');
   });
 
   it('rejects a patch for a different loaded resource', () => {

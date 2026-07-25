@@ -1,11 +1,11 @@
 import type { ModelDataPatchManifest } from './modelDataTypes';
 
-export const MODEL_DATA_PATCH_FORMAT_VERSION = 1;
+export const MODEL_DATA_PATCH_FORMAT_VERSION = 2;
 
 export const createModelDataPatchManifest = ({
   resourcePrefix,
   target,
-  vertexColors,
+  entries,
   textures
 }: Omit<
   ModelDataPatchManifest,
@@ -15,10 +15,10 @@ export const createModelDataPatchManifest = ({
   resourcePrefix,
   target,
   content: {
-    vertexColors: vertexColors.length > 0,
+    vertexColors: entries.some(({ type }) => type === 'v-color'),
     textures: textures.length > 0
   },
-  vertexColors,
+  entries,
   textures
 });
 

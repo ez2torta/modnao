@@ -4,6 +4,7 @@ import { showError } from '@/modules/error-messages';
 import { createAppAsyncThunk } from '@/storeTypings';
 import globalBuffers from '@/utils/data/globalBuffers';
 import { createB64ImgFromTextureDef } from '@/utils/textures';
+import type { ModelDataPatchEntry } from './modelDataTypes';
 import { createModelDataPatchManifest } from './parseModelDataPatchManifest';
 import {
   getModelDataPatchTarget,
@@ -47,7 +48,7 @@ const downloadModelDataPatch = createAppAsyncThunk(
       const textureImagePrefix =
         textureFileName?.replace(/\.([a-zA-Z0-9]+)$/, '') ?? resourcePrefix;
       const textureIndexSet = new Set(textureIndexes);
-      const vertexColors = models.flatMap((model, modelIndex) =>
+      const entries = models.flatMap((model, modelIndex) =>
         model.meshes.flatMap((mesh, meshIndex) =>
           !mesh.hasColoredVertices
             ? []
@@ -70,12 +71,15 @@ const downloadModelDataPatch = createAppAsyncThunk(
                     ? []
                     : [
                         {
-                          modelIndex,
-                          meshIndex,
-                          polygonIndex,
-                          vertexIndex,
-                          color: vertex.colors
-                        }
+                          type: 'v-color',
+                          entry: [
+                            modelIndex,
+                            meshIndex,
+                            polygonIndex,
+                            vertexIndex,
+                            vertex.colors
+                          ]
+                        } satisfies ModelDataPatchEntry
                       ];
                 })
               )
@@ -107,7 +111,7 @@ const downloadModelDataPatch = createAppAsyncThunk(
       const manifest = createModelDataPatchManifest({
         resourcePrefix,
         target: getModelDataPatchTarget(resourceAttribs),
-        vertexColors,
+        entries,
         textures
       });
       const zip = new JSZip();
@@ -127,10 +131,10 @@ const downloadModelDataPatch = createAppAsyncThunk(
         })
       );
 
-      zip.file(`${resourcePrefix}.mnp.json`, JSON.stringify(manifest, null, 2));
+      zip.file(`${resourcePrefix}.mnp.json`, JSON.stringify(manifest));
 
       saveAs(
-        await zip.generateAsync({ type: 'blob' }),
+        await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }),
         `${resourcePrefix}.mnp.zip`
       );
     } catch (error) {

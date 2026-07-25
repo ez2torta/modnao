@@ -134,39 +134,42 @@ const loadModelDataPatch = createAppAsyncThunk(
         Map<number, NLColorRGBA>
       >();
 
-      manifest.vertexColors.forEach(
-        ({ modelIndex, meshIndex, polygonIndex, vertexIndex, color }) => {
-          const mesh = models[modelIndex]?.meshes[meshIndex];
-          const vertex = mesh?.polygons[polygonIndex]?.vertices[vertexIndex];
-
-          if (!mesh?.hasColoredVertices || !vertex?.colors) {
-            throw new Error(PATCH_MODEL_CHANGES_ERROR);
-          }
-
-          if (
-            !Array.isArray(color) ||
-            color.length !== 4 ||
-            !color.every(
-              (channel) =>
-                Number.isFinite(channel) && channel >= 0 && channel <= 1
-            )
-          ) {
-            throw new Error(PATCH_MODEL_CHANGES_ERROR);
-          }
-
-          const colorOffset = vertex.contentAddress + O.Vertex.COLORS;
-
-          if (colorOffset < 0 || colorOffset + 3 >= polygonBuffer.length) {
-            throw new Error(PATCH_MODEL_CHANGES_ERROR);
-          }
-
-          const modelUpdates =
-            vertexColorUpdatesByModel.get(modelIndex) ??
-            new Map<number, NLColorRGBA>();
-          modelUpdates.set(vertex.contentAddress, color);
-          vertexColorUpdatesByModel.set(modelIndex, modelUpdates);
+      manifest.entries.forEach(({ type, entry }) => {
+        if (type !== 'v-color') {
+          throw new Error(PATCH_MODEL_CHANGES_ERROR);
         }
-      );
+
+        const [modelIndex, meshIndex, polygonIndex, vertexIndex, color] = entry;
+        const mesh = models[modelIndex]?.meshes[meshIndex];
+        const vertex = mesh?.polygons[polygonIndex]?.vertices[vertexIndex];
+
+        if (!mesh?.hasColoredVertices || !vertex?.colors) {
+          throw new Error(PATCH_MODEL_CHANGES_ERROR);
+        }
+
+        if (
+          !Array.isArray(color) ||
+          color.length !== 4 ||
+          !color.every(
+            (channel) =>
+              Number.isFinite(channel) && channel >= 0 && channel <= 1
+          )
+        ) {
+          throw new Error(PATCH_MODEL_CHANGES_ERROR);
+        }
+
+        const colorOffset = vertex.contentAddress + O.Vertex.COLORS;
+
+        if (colorOffset < 0 || colorOffset + 3 >= polygonBuffer.length) {
+          throw new Error(PATCH_MODEL_CHANGES_ERROR);
+        }
+
+        const modelUpdates =
+          vertexColorUpdatesByModel.get(modelIndex) ??
+          new Map<number, NLColorRGBA>();
+        modelUpdates.set(vertex.contentAddress, color);
+        vertexColorUpdatesByModel.set(modelIndex, modelUpdates);
+      });
 
       vertexColorUpdatesByModel.forEach((modelUpdates) => {
         modelUpdates.forEach((color, contentAddress) => {

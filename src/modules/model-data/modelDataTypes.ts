@@ -136,13 +136,20 @@ export interface ModelDataPatchTarget {
   textureMapped: boolean;
 }
 
-export interface ModelDataPatchVertexColor {
-  modelIndex: number;
-  meshIndex: number;
-  polygonIndex: number;
-  vertexIndex: number;
-  color: NLColorRGBA;
+export type ModelDataPatchVertexColorTuple = [
+  modelIndex: number,
+  meshIndex: number,
+  polygonIndex: number,
+  vertexIndex: number,
+  color: NLColorRGBA
+];
+
+export interface ModelDataPatchVertexColorEntry {
+  type: 'v-color';
+  entry: ModelDataPatchVertexColorTuple;
 }
+
+export type ModelDataPatchEntry = ModelDataPatchVertexColorEntry;
 
 export interface ModelDataPatchTexture {
   textureIndex: number;
@@ -152,14 +159,14 @@ export interface ModelDataPatchTexture {
 }
 
 export interface ModelDataPatchManifest {
-  formatVersion: 1;
+  formatVersion: 2;
   resourcePrefix: string;
   target: ModelDataPatchTarget;
   content: {
     vertexColors: boolean;
     textures: boolean;
   };
-  vertexColors: ModelDataPatchVertexColor[];
+  entries: ModelDataPatchEntry[];
   textures: ModelDataPatchTexture[];
 }
 
