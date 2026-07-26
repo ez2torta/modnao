@@ -40,7 +40,7 @@ const loadModelDataPatch = createAppAsyncThunk(
     }
 
     try {
-      const resourcePrefix = getModelDataPatchPrefix(file.name);
+      getModelDataPatchPrefix(file.name);
       let zip: JSZip;
 
       try {
@@ -51,21 +51,28 @@ const loadModelDataPatch = createAppAsyncThunk(
         );
       }
 
-      const manifestFile = zip.file(`${resourcePrefix}.mnp.json`);
+      const manifestFiles = Object.values(zip.files).filter(
+        ({ dir, name }) => !dir && /^[a-z0-9]+\.mnp\.json$/i.test(name)
+      );
 
-      if (!manifestFile) {
+      if (manifestFiles.length !== 1) {
         throw new Error(
           'This patch file is incomplete or damaged. Create or download it again and retry.'
         );
       }
 
+      const [manifestFile] = manifestFiles;
       const manifest = parseModelDataPatchManifest(
         await manifestFile.async('string')
       );
+      const manifestResourcePrefix = manifestFile.name.slice(
+        0,
+        -'.mnp.json'.length
+      );
 
-      if (manifest.resourcePrefix !== resourcePrefix) {
+      if (manifest.resourcePrefix !== manifestResourcePrefix) {
         throw new Error(
-          'This patch filename has changed. Restore its original filename and retry.'
+          'This patch file is incomplete or damaged. Create or download it again and retry.'
         );
       }
 

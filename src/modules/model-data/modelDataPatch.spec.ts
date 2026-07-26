@@ -101,7 +101,7 @@ describe('modelDataPatch', () => {
     const zipBuffer: ArrayBuffer = await zip.generateAsync({
       type: 'arraybuffer'
     });
-    const file = new File([zipBuffer], 'stg01.mnp.zip');
+    const file = new File([zipBuffer], 'stg01.psychadelic-dark.mnp.zip');
     const store = setupStore();
     const contentAddress = 16;
     const createVertex = (): NLVertex => ({

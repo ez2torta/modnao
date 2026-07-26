@@ -27,7 +27,7 @@ export const getModelDataPatchPrefix = (fileName: string) => {
 
   const prefix = fileName.slice(0, -MODEL_DATA_PATCH_EXTENSION.length);
 
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(prefix)) {
+  if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(prefix)) {
     throw new Error(
       'This patch filename is not recognized. Restore its original filename and retry.'
     );
