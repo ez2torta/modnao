@@ -105,6 +105,7 @@ const resourceAttribMappings: Record<ResourceHashKey, ResourceAttribs> = {
     identifier: 'STXX',
     resourceType: 'vs2-stage',
     filenamePattern: '^ST(G)?(E)?[0-9A-Z]{2}(.mn)?POL.BIN$',
+    isGenericFallback: true,
     polygonMapped: true,
     oobReferencable: false,
     hasLzssTextureFile: false
@@ -115,6 +116,7 @@ const resourceAttribMappings: Record<ResourceHashKey, ResourceAttribs> = {
     identifier: 'STXX',
     resourceType: 'vs2-stage',
     filenamePattern: '^ST(G)?(E)?[0-9A-Z]{2}TEX(.mn)?.BIN$',
+    isGenericFallback: true,
     polygonMapped: true,
     oobReferencable: false,
     textureFileType: 'vs2-stage-file',
@@ -128,6 +130,7 @@ const resourceAttribMappings: Record<ResourceHashKey, ResourceAttribs> = {
     identifier: 'DMXX',
     resourceType: 'vs2-demo',
     filenamePattern: '^DM[0-9A-Z]{2}(E)?TEX(.mn)?.BIN$',
+    isGenericFallback: true,
     polygonMapped: true,
     oobReferencable: true,
     textureFileType: 'vs2-demo-model',
@@ -139,6 +142,7 @@ const resourceAttribMappings: Record<ResourceHashKey, ResourceAttribs> = {
     identifier: 'DMXX',
     resourceType: 'vs2-demo',
     filenamePattern: '^DM[0-9A-Z]{2}(E)?(.mn)?POL.BIN$',
+    isGenericFallback: true,
     polygonMapped: true,
     oobReferencable: true,
     hasLzssTextureFile: false

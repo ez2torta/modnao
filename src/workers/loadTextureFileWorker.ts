@@ -25,6 +25,12 @@ export type LoadTextureFileWorkerPayload = Pick<
 
 const COLOR_SIZE = 2;
 const urlTypes = ['opaque', 'translucent'] as TextureDataUrlType[];
+const isOutOfBoundsError = (error: unknown) =>
+  error instanceof RangeError ||
+  (typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'RangeError');
 
 function createTexturePixelBuffers(
   textureFileBuffer: SharedArrayBuffer,
@@ -67,14 +73,31 @@ function createTexturePixelBuffers(
           const offsetDrawn = encodeZMortonPosition(offset - yOffset, y);
           const readOffset = sourceLocation + offsetDrawn * COLOR_SIZE;
           // textures may point out of bounds (this would be to RAM elsewhere in-game)
-          if (readOffset >= sourceBuffer.length && !failOutOfBounds) {
+          if (
+            readOffset + COLOR_SIZE > sourceBuffer.length &&
+            !failOutOfBounds
+          ) {
             texturePixelBuffers.push(new SharedArrayBuffer(0));
             console.error('texture buffer out of range');
             hasPushed = true;
             continue;
           }
 
-          const colorValue = sourceBuffer.readUInt16LE(readOffset);
+          let colorValue: number;
+
+          try {
+            colorValue = sourceBuffer.readUInt16LE(readOffset);
+          } catch (error) {
+            if (!isOutOfBoundsError(error) || failOutOfBounds) {
+              throw error;
+            }
+
+            texturePixelBuffers.push(new SharedArrayBuffer(0));
+            console.error('texture buffer out of range');
+            hasPushed = true;
+            continue;
+          }
+
           const conversionOp = rgba8888TargetOps[t.colorFormat];
           const color = conversionOp(colorValue);
 
@@ -85,7 +108,9 @@ function createTexturePixelBuffers(
           pixels[canvasOffset + 3] = type === 'translucent' ? color.a : 255;
         }
       }
-      texturePixelBuffers.push(sharedPixelBuffer);
+      if (!hasPushed) {
+        texturePixelBuffers.push(sharedPixelBuffer);
+      }
     }
   });
 
@@ -126,22 +151,37 @@ export default function loadTextureFileWorker({
     // something should be compressed vs "clever" solution of dealing with
     // things here this way -- is somewhat of a crutch for now
 
-    if (!(error instanceof RangeError)) {
+    if (!isOutOfBoundsError(error)) {
       throw error;
     }
 
     const decompressedTextureBuffer = decompressLzssBuffer(textureFileBuffer);
 
-    const texturePixelBuffers = createTexturePixelBuffers(
-      decompressedTextureBuffer,
-      textureDefs,
-      !expectOobReferences
-    );
+    try {
+      const texturePixelBuffers = createTexturePixelBuffers(
+        decompressedTextureBuffer,
+        textureDefs,
+        !expectOobReferences
+      );
+
+      return {
+        texturePixelBuffers,
+        decompressedTextureBuffer,
+        isLzssCompressed: true
+      };
+    } catch (decompressionError) {
+      if (!isOutOfBoundsError(decompressionError)) {
+        throw decompressionError;
+      }
+    }
 
     return {
-      texturePixelBuffers,
-      decompressedTextureBuffer,
-      isLzssCompressed: true
+      texturePixelBuffers: createTexturePixelBuffers(
+        textureFileBuffer,
+        textureDefs,
+        false
+      ),
+      decompressedTextureBuffer: textureFileBuffer
     };
   }
 

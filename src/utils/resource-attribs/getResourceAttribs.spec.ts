@@ -232,6 +232,18 @@ describe('getResourceAttribs', () => {
     expect(resourceAttribs).toMatchObject({
       game: 'VS2',
       resourceType: 'vs2-stage',
+      isGenericFallback: true,
+      hasLzssTextureFile: false
+    });
+  });
+
+  it('keeps cross-game stage filenames on the generic stage fallback', () => {
+    const resourceAttribs = getResourceAttribs('unknown', 'STG0BPOL.BIN');
+
+    expect(resourceAttribs).toMatchObject({
+      game: 'VS2',
+      resourceType: 'vs2-stage',
+      isGenericFallback: true,
       hasLzssTextureFile: false
     });
   });

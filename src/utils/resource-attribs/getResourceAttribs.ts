@@ -23,9 +23,23 @@ export default function getResourceAttribs(hash: string, fileName: string) {
     return fileNameAndHashMatch;
   }
 
-  return mappingsByFilename.find(
-    (attribs) =>
-      !attribs.textureDefsHash &&
-      new RegExp(attribs.filenamePattern, 'i').test(fileName)
+  const matchedResources = mappingsByFilename.filter((attribs) =>
+    new RegExp(attribs.filenamePattern, 'i').test(fileName)
   );
+
+  const concreteMatches = matchedResources.filter(
+    ({ isGenericFallback, textureDefsHash }) =>
+      !isGenericFallback && !textureDefsHash
+  );
+  const matchedGames = new Set(
+    matchedResources
+      .filter(({ isGenericFallback }) => !isGenericFallback)
+      .map(({ game }) => game)
+  );
+
+  if (matchedGames.size === 1 && concreteMatches.length) {
+    return concreteMatches[0];
+  }
+
+  return matchedResources.find(({ isGenericFallback }) => isGenericFallback);
 }

@@ -25,6 +25,7 @@ export type ResourceAttribs = {
   oobReferencable: boolean;
   textureFileType?: TextureFileType;
   textureDefsHash?: string;
+  isGenericFallback?: boolean;
   hasLzssTextureFile: boolean;
   textureShapesMap?: NLUITextureDef[];
 } & (NonPolygonMapping | PolygonMapping);

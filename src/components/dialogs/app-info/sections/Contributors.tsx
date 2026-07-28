@@ -41,7 +41,7 @@ export default function Contributors({ compact }: ContributorsProps) {
         </Typography>
         <Typography variant={'body2'}>
           Magnetro2K, Paxtez, DJ Clayface, Toan, Blindfire604, derek (ateam),
-          ONTortita, tengu, ViolinKen, lethalmonk6
+          ONTortita, tengu, ViolinKen, lethalmonk6, herb
         </Typography>
       </Box>
     </div>
