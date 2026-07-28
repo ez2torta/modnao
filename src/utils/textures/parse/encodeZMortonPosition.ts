@@ -9,5 +9,5 @@ export default function encodeZMortonPosition(x: number, y: number) {
   y = (y | (y << 2)) & 0x33333333; // Interleave bits of y yet again
   x = (x | (x << 1)) & 0x55555555; // Interleave bits of x for the last time
   y = (y | (y << 1)) & 0x55555555; // Interleave bits of y for the last time
-  return x | (y << 1); // Combine interleaved x and y bits
+  return y | (x << 1); // PVR stores y in even bits and x in odd bits
 }

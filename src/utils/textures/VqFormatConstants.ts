@@ -1,4 +1,5 @@
 export const VQ_TEXTURE_ENCODE_TYPE = 3;
+export const RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE = 13;
 
 export const TEXTURE_COLOR_SIZE = 2;
 export const VQ_CODEBOOK_ENTRY_COUNT = 256;

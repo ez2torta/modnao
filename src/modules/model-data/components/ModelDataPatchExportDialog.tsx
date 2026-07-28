@@ -230,8 +230,7 @@ export default function ModelDataPatchExportDialog() {
                   '& canvas': {
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover',
-                    transform: 'rotate(-90deg)'
+                    objectFit: 'cover'
                   }
                 }}
               >

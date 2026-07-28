@@ -11,41 +11,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/storeTypings';
 import { showError } from '@/modules/error-messages';
 
-async function rotateDataUri(dataURI: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const img = new Image();
-    img.src = dataURI;
-
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-
-      const width = img.height;
-      const height = img.width;
-
-      canvas.width = width;
-      canvas.height = height;
-
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((90 * Math.PI) / 180);
-      ctx.scale(1, -1);
-      ctx.drawImage(img, -width / 2, -height / 2);
-
-      const rotatedDataURI = canvas.toDataURL();
-      resolve(rotatedDataURI);
-    };
-
-    img.onerror = (error) => {
-      reject(error);
-    };
-  });
-}
-
 const exporter = new GLTFExporter();
-
-type GLTFImage = {
-  uri: string;
-};
 
 interface SceneGLTFFileDownloaderOptions {
   modelIndexes: number[];
@@ -126,17 +92,7 @@ export default function useSceneGLTFFileDownloader({
     await new Promise((r) => setTimeout(r, 100));
 
     try {
-      const output = (await exporter.parseAsync(scene)) as {
-        images: GLTFImage[];
-      };
-
-      const rotationPromises = output.images.map(async (img) => {
-        const uri = await rotateDataUri(img.uri);
-        return { ...img, uri };
-      });
-
-      const rotatedImages = await Promise.all(rotationPromises);
-      output.images = rotatedImages;
+      const output = await exporter.parseAsync(scene);
 
       const file = new Blob([JSON.stringify(output, null, 2)], {
         type: 'application/object'

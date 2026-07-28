@@ -40,7 +40,7 @@ export default function processExportTexturePixels({
     const yOffset = width * y;
     for (let offset = yOffset; offset < yOffset + width; offset++) {
       const [positionX, positionY] = decodeZMortonPosition(offset);
-      const positionOffset = positionY * width + positionX;
+      const positionOffset = (height - 1 - positionY) * width + positionX;
       const colorOffset = positionOffset * 4;
 
       if (colorOffset + 3 >= pixelColors.length) {

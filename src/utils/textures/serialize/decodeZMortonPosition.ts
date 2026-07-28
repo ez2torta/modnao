@@ -5,5 +5,5 @@ export default function decodeZMortonPosition(z: number) {
     x |= (z & (1 << (2 * i))) >> i;
     y |= (z & (1 << (2 * i + 1))) >> (i + 1);
   }
-  return [x, y];
+  return [y, x];
 }

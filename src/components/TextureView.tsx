@@ -183,8 +183,7 @@ export default function TextureView() {
                 '& > div': {
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: 'rotate(-90deg)'
+                  justifyContent: 'center'
                 },
                 '& canvas': {
                   width: 'var(--size)',

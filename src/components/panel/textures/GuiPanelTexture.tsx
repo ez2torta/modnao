@@ -54,8 +54,7 @@ const panelTextureSx: SxProps<Theme> = (theme) => ({
   '& .img': {
     width: '100%',
     height: '100%',
-    opacity: 1,
-    transform: 'rotate(-90deg)'
+    opacity: 1
   },
   '& .selected:after': {
     position: 'absolute',
@@ -122,17 +121,6 @@ export type GuiPanelTextureProps =
       selectedTextureReferences: undefined;
       contentViewMode: undefined;
     };
-
-// rotate in 90 deg to match the orientation of stored textures
-const rotateUvClipPathForTextureEdit = (
-  path: UvClipPath,
-  width: number,
-  height: number
-) =>
-  path.map(({ x, y }) => ({
-    x: width / 2 + height / 2 - y,
-    y: height / 2 + x - width / 2
-  }));
 
 const createMeshUvClipPaths = (
   mesh: NLMesh | undefined,
@@ -289,10 +277,8 @@ export default function GuiPanelTexture(props: GuiPanelTextureProps) {
       return [];
     }
 
-    return selectedUvClipPathGroups.flatMap(({ paths }) =>
-      paths.map((path) => rotateUvClipPathForTextureEdit(path, width, height))
-    );
-  }, [height, selected, selectedUvClipPathGroups, uvRegionsHighlighted, width]);
+    return selectedUvClipPathGroups.flatMap(({ paths }) => paths);
+  }, [selected, selectedUvClipPathGroups, uvRegionsHighlighted]);
 
   const hasUvClipPaths = useMemo(
     () => uvClipPathGroups.some(({ paths }) => paths.length > 0),

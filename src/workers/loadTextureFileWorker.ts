@@ -1,10 +1,14 @@
 import type { NLUITextureDef, TextureDataUrlType } from '@/types';
 import encodeZMortonPosition from '@/utils/textures/parse/encodeZMortonPosition';
+import encodeZMortonRectanglePosition from '@/utils/textures/parse/encodeZMortonRectanglePosition';
 import decompressLzssBuffer from '@/utils/data/decompressLzssBuffer';
 import rgba8888TargetOps from '@/utils/color-conversions/rgba8888TargetOps';
 import decompressVqBuffer from '@/utils/data/decompressVqBuffer';
 import getTextureDefDataLength from '@/utils/textures/getTextureDefDataLength';
-import { VQ_TEXTURE_ENCODE_TYPE } from '@/utils/textures/VqFormatConstants';
+import {
+  RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE,
+  VQ_TEXTURE_ENCODE_TYPE
+} from '@/utils/textures/VqFormatConstants';
 import type { LoadTexturesBasePayload } from '@/modules/model-data/modelDataTypes';
 
 export type LoadTextureFileWorkerResult = {
@@ -44,6 +48,8 @@ function createTexturePixelBuffers(
   textureDefs.forEach((t) => {
     const realLocation = t.baseLocation - t.ramOffset;
     const isVqTexture = t.type === VQ_TEXTURE_ENCODE_TYPE;
+    const isRectangleTwiddledTexture =
+      t.type === RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE;
     const textureBufferLength = getTextureDefDataLength(t);
     const sourceBuffer = !isVqTexture
       ? fileBuffer
@@ -65,12 +71,20 @@ function createTexturePixelBuffers(
           continue;
         }
         const yOffset = t.width * y;
+        const sourceY = t.height - 1 - y;
 
         for (let offset = yOffset; offset < yOffset + t.width; offset += 1) {
           if (hasPushed) {
             continue;
           }
-          const offsetDrawn = encodeZMortonPosition(offset - yOffset, y);
+          const offsetDrawn = isRectangleTwiddledTexture
+            ? encodeZMortonRectanglePosition(
+                offset - yOffset,
+                sourceY,
+                t.width,
+                t.height
+              )
+            : encodeZMortonPosition(offset - yOffset, sourceY);
           const readOffset = sourceLocation + offsetDrawn * COLOR_SIZE;
           // textures may point out of bounds (this would be to RAM elsewhere in-game)
           if (

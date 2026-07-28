@@ -6,15 +6,11 @@ import {
   RGBAFormat,
   SRGBColorSpace,
   Texture,
-  UnsignedByteType,
-  Vector2
+  UnsignedByteType
 } from 'three';
 import type { NLUITextureDef } from '@/types';
 import globalBuffers from '@/utils/data/globalBuffers';
 import useClientEffect from './useClientEffect';
-
-const TEXTURE_ROTATION = 1.5708;
-const TEXTURE_CENTER = new Vector2(0.5, 0.5);
 
 const textureTypes = ['opaque', 'translucent'] as const;
 
@@ -57,10 +53,7 @@ export default function useSceneTextureMapCache(textureDefs: NLUITextureDef[]) {
                 undefined,
                 SRGBColorSpace
               );
-              texture.rotation = TEXTURE_ROTATION;
-              texture.center = TEXTURE_CENTER;
-              texture.repeat.y = -1;
-              texture.flipY = false;
+              texture.flipY = true;
               texture.needsUpdate = true;
               nextMap.set(mapKey, { texture, bufferKey });
             } else {

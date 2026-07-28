@@ -110,12 +110,6 @@ export default function GuiPanelTextureUvPreview({
           context.globalAlpha = 1;
           context.filter = 'saturate(1)';
 
-          context.save();
-
-          context.translate(canvas.width / 2, canvas.height / 2);
-          context.rotate((90 * Math.PI) / 180);
-          context.translate(-canvas.width / 2, -canvas.height / 2);
-
           uvClipPathGroups.forEach(({ paths, color }) => {
             paths.forEach((points) => {
               if (points.length === 0) {
@@ -133,10 +127,6 @@ export default function GuiPanelTextureUvPreview({
               context.closePath();
               context.clip();
 
-              context.translate(canvas.width / 2, canvas.height / 2);
-              context.rotate((-90 * Math.PI) / 180);
-              context.translate(-canvas.width / 2, -canvas.height / 2);
-
               context.drawImage(highlightTextureBitmap, 0, 0);
 
               if (color) {
@@ -148,7 +138,6 @@ export default function GuiPanelTextureUvPreview({
               context.restore();
             });
           });
-          context.restore();
         }
       }
 
