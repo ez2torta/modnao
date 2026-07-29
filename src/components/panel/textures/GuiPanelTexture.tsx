@@ -363,11 +363,24 @@ export default function GuiPanelTexture(props: GuiPanelTextureProps) {
       width: '100%',
       position: 'relative',
       display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       aspectRatio: '1 / 1'
     },
     ...mainContentProps,
     className: mainContentProps.className
   };
+
+  const previewSx = {
+    display: 'flex',
+    width: width >= height ? '100%' : 'auto',
+    height: height > width ? '100%' : 'auto',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    aspectRatio: `${width} / ${height}`
+  };
+
+  const preview = <Box sx={previewSx}>{content}</Box>;
 
   return (
     <Box
@@ -380,10 +393,10 @@ export default function GuiPanelTexture(props: GuiPanelTextureProps) {
       sx={panelTextureSx}
     >
       {!isSelectable ? (
-        <Box {...imgAreaProps}>{content}</Box>
+        <Box {...imgAreaProps}>{preview}</Box>
       ) : (
         <Tooltip title='Select this texture'>
-          <ButtonBase {...imgAreaProps}>{content}</ButtonBase>
+          <ButtonBase {...imgAreaProps}>{preview}</ButtonBase>
         </Tooltip>
       )}
       {textureDef ? (
