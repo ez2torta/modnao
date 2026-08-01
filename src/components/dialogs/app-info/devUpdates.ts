@@ -12,6 +12,35 @@ export interface XUpdatePart {
 
 export const xUpdates: XUpdate[] = [
   {
+    publishedAt: '2026-07-23',
+    parts: [
+      {
+        hasImages: true,
+        textLines: [
+          '- new in-app patch format for import/exports of models and textures',
+          '- expanded support for modded MVC2 stages',
+          '- no more manual re-orientation when importing/exporting images',
+          '- hsl texture edit optimizations'
+        ],
+        url: 'https://x.com/rob2d_u8/status/2083031668600787438?s=20'
+      }
+    ]
+  },
+  {
+    publishedAt: '2026-07-02',
+    parts: [
+      {
+        hasVideo: true,
+        textLines: [
+          '- third vertex color edit mode for gradients',
+          '- MVC2 factory annotations',
+          '- visual polish and bug fixes'
+        ],
+        url: 'https://x.com/rob2d_u8/status/2080467407080919295?s=20'
+      }
+    ]
+  },
+  {
     publishedAt: '2026-06-30',
     parts: [
       {
