@@ -4,7 +4,10 @@ import processExportTexturePixels from '@/utils/textures/files/processExportText
 import getQuantizeOptions from '@/utils/textures/files/getQuantizationOptions';
 import compressVqBuffer from '@/utils/data/compressVqBuffer';
 import { getTextureDefDataLength } from '@/utils/textures';
-import { VQ_TEXTURE_ENCODE_TYPE } from '@/utils/textures/VqFormatConstants';
+import {
+  RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE,
+  VQ_TEXTURE_ENCODE_TYPE
+} from '@/utils/textures/VqFormatConstants';
 
 export type ExportTextureDefRegionWorkerPayload = {
   textureDef: NLUITextureDef;
@@ -73,6 +76,8 @@ export default async function exportTextureDefRegionWorker({
     baseLocation,
     ramOffset,
     colorFormat,
-    textureBuffer
+    textureBuffer,
+    isRectangleTwiddledTexture:
+      textureDef.type === RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE
   });
 }

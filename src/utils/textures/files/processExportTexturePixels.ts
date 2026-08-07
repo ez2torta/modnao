@@ -3,6 +3,7 @@ import {
   rgbaToArgb4444,
   rgbaToRgb565
 } from '@/utils/color-conversions';
+import encodeZMortonRectanglePosition from '../parse/encodeZMortonRectanglePosition';
 import { RgbaColor } from '../RgbaColor';
 import { decodeZMortonPosition } from '../serialize';
 import { TextureColorFormat } from '../TextureColorFormat';
@@ -25,7 +26,8 @@ export default function processExportTexturePixels({
   baseLocation,
   ramOffset,
   colorFormat,
-  textureBuffer
+  textureBuffer,
+  isRectangleTwiddledTexture = false
 }: {
   pixelColors: Uint8Array;
   width: number;
@@ -34,12 +36,15 @@ export default function processExportTexturePixels({
   ramOffset: number;
   colorFormat: TextureColorFormat;
   textureBuffer: SharedArrayBuffer;
+  isRectangleTwiddledTexture?: boolean;
 }) {
   const buffer = new Uint8Array(textureBuffer);
   for (let y = 0; y < height; y++) {
     const yOffset = width * y;
     for (let offset = yOffset; offset < yOffset + width; offset++) {
-      const [positionX, positionY] = decodeZMortonPosition(offset);
+      const [positionX, positionY] = isRectangleTwiddledTexture
+        ? [offset - yOffset, y]
+        : decodeZMortonPosition(offset);
       const positionOffset = (height - 1 - positionY) * width + positionX;
       const colorOffset = positionOffset * 4;
 
@@ -55,7 +60,11 @@ export default function processExportTexturePixels({
       };
 
       const conversionOp = conversionDict[colorFormat];
-      const offsetWritten = baseLocation - ramOffset + offset * COLOR_SIZE;
+      const texturePosition = isRectangleTwiddledTexture
+        ? encodeZMortonRectanglePosition(positionX, positionY, width, height)
+        : offset;
+      const offsetWritten =
+        baseLocation - ramOffset + texturePosition * COLOR_SIZE;
 
       if (offsetWritten + COLOR_SIZE <= buffer.length) {
         const convertedColor = conversionOp(color);
