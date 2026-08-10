@@ -274,6 +274,10 @@ async function main() {
         await dumpPolTexPair(polFile, file, outDir, { verbose: true });
       } else if (file.includes('_FAC')) {
         await dumpCharacterFac(file, outDir, { verbose: true });
+      } else if (file.includes('DM08CHR')) {
+        await dumpDm08Chr(file, outDir, { verbose: true });
+      } else if (file.includes('DM08CAB')) {
+        await dumpDm08Cab(file, outDir, { verbose: true });
       } else {
         await dumpGenericTextureFile(file, outDir, { verbose: true });
       }
@@ -292,6 +296,10 @@ async function main() {
         await injectPolTexPair(polFile, file, pngDir, outFile, { verbose: true });
       } else if (file.includes('_FAC')) {
         await injectCharacterFac(file, pngDir, outFile, { verbose: true });
+      } else if (file.includes('DM08CHR')) {
+        await injectDm08Chr(file, pngDir, outFile, { verbose: true });
+      } else if (file.includes('DM08CAB')) {
+        await injectDm08Cab(file, pngDir, outFile, { verbose: true });
       } else {
         await injectGenericTextureFile(file, pngDir, outFile, { verbose: true });
       }

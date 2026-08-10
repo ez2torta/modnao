@@ -17,6 +17,7 @@ import getTextureDefDataLength from '@/utils/textures/getTextureDefDataLength';
 import encodeZMortonPosition from '@/utils/textures/parse/encodeZMortonPosition';
 import rgba8888TargetOps from '@/utils/color-conversions/rgba8888TargetOps';
 import rgbaToArgb4444 from '@/utils/color-conversions/rgbaToArgb4444';
+import rgbaToArgb1555 from '@/utils/color-conversions/rgbaToArgb1555';
 import rgbaToRgb565 from '@/utils/color-conversions/rgbaToRgb565';
 
 const PTR_SIZE = 4;
@@ -625,7 +626,7 @@ export async function injectDm08Chr(
 }
 
 /**
- * Extrae la textura de la máquina arcade de la intro en DM08CAB.BIN (512x512 RGB565)
+ * Extrae las texturas de Cable y Ruby Heart de la intro en DM08CAB.BIN (2 texturas 512x512 ARGB1555)
  */
 export async function dumpDm08Cab(
   cabPath: string,
@@ -637,40 +638,49 @@ export async function dumpDm08Cab(
   const cabBuf = fs.readFileSync(cabPath);
   const width = 512;
   const height = 512;
+  const textureByteSize = width * height * 2; // 524288 bytes per texture
 
   fs.mkdirSync(outDir, { recursive: true });
 
-  const pixels = Buffer.alloc(width * height * 4);
-  for (let y = 0; y < height; y++) {
-    const yOffset = width * y;
-    const sourceY = height - 1 - y;
-    for (let x = 0; x < width; x++) {
-      const offsetDrawn = encodeZMortonPosition(x, sourceY);
-      const readOffset = offsetDrawn * 2;
-      if (readOffset + 2 <= cabBuf.length) {
-        const colorValue = cabBuf.readUInt16LE(readOffset);
-        const color = rgba8888TargetOps.RGB565(colorValue);
-        const canvasOffset = (yOffset + x) * 4;
-        pixels[canvasOffset] = color.r;
-        pixels[canvasOffset + 1] = color.g;
-        pixels[canvasOffset + 2] = color.b;
-        pixels[canvasOffset + 3] = color.a;
+  const textureCount = Math.floor(cabBuf.length / textureByteSize);
+  let exported = 0;
+
+  for (let i = 0; i < textureCount; i++) {
+    const baseOffset = i * textureByteSize;
+    const pixels = Buffer.alloc(width * height * 4);
+
+    for (let y = 0; y < height; y++) {
+      const yOffset = width * y;
+      const sourceY = height - 1 - y;
+      for (let x = 0; x < width; x++) {
+        const offsetDrawn = encodeZMortonPosition(x, sourceY);
+        const readOffset = baseOffset + offsetDrawn * 2;
+        if (readOffset + 2 <= cabBuf.length) {
+          const colorValue = cabBuf.readUInt16LE(readOffset);
+          const color = rgba8888TargetOps.ARGB1555(colorValue);
+          const canvasOffset = (yOffset + x) * 4;
+          pixels[canvasOffset] = color.r;
+          pixels[canvasOffset + 1] = color.g;
+          pixels[canvasOffset + 2] = color.b;
+          pixels[canvasOffset + 3] = color.a;
+        }
       }
     }
-  }
 
-  const img = new Jimp({ width, height, data: pixels });
-  const pngPath = path.join(outDir, `modnao-texture-0.png`);
-  await img.write(pngPath as any);
+    const img = new Jimp({ width, height, data: pixels });
+    const pngPath = path.join(outDir, `modnao-texture-${i}.png`);
+    await img.write(pngPath as any);
+    exported++;
+  }
 
   if (options.verbose) {
-    console.log(`[DUMP] ${path.basename(cabPath)} -> 1 textura en ${outDir}`);
+    console.log(`[DUMP] ${path.basename(cabPath)} -> ${exported} texturas (Cable y Ruby Heart) en ${outDir}`);
   }
-  return 1;
+  return exported;
 }
 
 /**
- * Reinyecta la textura de la máquina arcade en DM08CAB.BIN
+ * Reinyecta las texturas de Cable y Ruby Heart en DM08CAB.BIN
  */
 export async function injectDm08Cab(
   cabPath: string,
@@ -678,34 +688,44 @@ export async function injectDm08Cab(
   outCabPath: string,
   options: InjectOptions = {}
 ): Promise<boolean> {
-  const pngPath = path.join(pngDir, `modnao-texture-0.png`);
-  if (!fs.existsSync(pngPath)) return false;
-
-  const [pixels] = await loadPngRgba(pngPath);
+  const origCabBuf = fs.existsSync(cabPath) ? fs.readFileSync(cabPath) : Buffer.alloc(1048576);
   const width = 512;
   const height = 512;
-  const raw16Buf = Buffer.alloc(width * height * 2);
+  const textureByteSize = width * height * 2;
+  const textureCount = 2;
 
-  for (let y = 0; y < height; y++) {
-    const yOffset = width * y;
-    const sourceY = height - 1 - y;
-    for (let x = 0; x < width; x++) {
-      const offsetDrawn = encodeZMortonPosition(x, sourceY);
-      const canvasOffset = (yOffset + x) * 4;
-      const r = pixels[canvasOffset];
-      const g = pixels[canvasOffset + 1];
-      const b = pixels[canvasOffset + 2];
-      const a = pixels[canvasOffset + 3];
-      const color16 = rgbaToRgb565(r, g, b, a);
-      raw16Buf.writeUInt16LE(color16, offsetDrawn * 2);
+  const finalBuf = Buffer.from(origCabBuf);
+  let modifiedCount = 0;
+
+  for (let i = 0; i < textureCount; i++) {
+    const pngPath = path.join(pngDir, `modnao-texture-${i}.png`);
+    if (!fs.existsSync(pngPath)) continue;
+
+    const [pixels] = await loadPngRgba(pngPath);
+    const baseOffset = i * textureByteSize;
+
+    for (let y = 0; y < height; y++) {
+      const yOffset = width * y;
+      const sourceY = height - 1 - y;
+      for (let x = 0; x < width; x++) {
+        const offsetDrawn = encodeZMortonPosition(x, sourceY);
+        const canvasOffset = (yOffset + x) * 4;
+        const r = pixels[canvasOffset];
+        const g = pixels[canvasOffset + 1];
+        const b = pixels[canvasOffset + 2];
+        const a = pixels[canvasOffset + 3];
+        const color16 = rgbaToArgb1555({ r, g, b, a });
+        finalBuf.writeUInt16LE(color16, baseOffset + offsetDrawn * 2);
+      }
     }
+    modifiedCount++;
   }
 
   fs.mkdirSync(path.dirname(outCabPath), { recursive: true });
-  fs.writeFileSync(outCabPath, raw16Buf);
+  fs.writeFileSync(outCabPath, finalBuf);
 
   if (options.verbose) {
-    console.log(`[INJECT] DM08CAB.BIN -> ${path.basename(outCabPath)} (1 textura actualizada)`);
+    console.log(`[INJECT] DM08CAB.BIN -> ${path.basename(outCabPath)} (${modifiedCount} texturas actualizadas)`);
   }
   return true;
 }
