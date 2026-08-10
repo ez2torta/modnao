@@ -15,7 +15,10 @@
     "test:w": "jest --watch",
     "test:changes": "jest --onlyChanged",
     "test:ci": "NODE_ENV=test jest --ci",
-    "test:snapshots": "jest --updateSnapshot"
+    "test:snapshots": "jest --updateSnapshot",
+    "textures:cli": "tsx src/cli/index.ts",
+    "textures:dump": "tsx src/cli/index.ts dump",
+    "textures:inject": "tsx src/cli/index.ts inject"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
