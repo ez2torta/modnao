@@ -8,11 +8,16 @@ import loadTextureFileWorker from '@/workers/loadTextureFileWorker';
 import exportTextureDefRegionWorker from '@/workers/exportTextureDefRegionWorker';
 import exportTextureFileWorker from '@/workers/exportTextureFileWorker';
 import decompressLzssBuffer from '@/utils/data/decompressLzssBuffer';
+import compressLzssBuffer from '@/utils/data/compressLzssBuffer';
 import decompressVqBuffer from '@/utils/data/decompressVqBuffer';
 import sharedBufferFrom from '@/utils/data/sharedBufferFrom';
 import resourceAttribMappings from '@/constants/resourceAttribMappings';
 import getResourceAttribs from '@/utils/resource-attribs/getResourceAttribs';
 import getTextureDefDataLength from '@/utils/textures/getTextureDefDataLength';
+import encodeZMortonPosition from '@/utils/textures/parse/encodeZMortonPosition';
+import rgba8888TargetOps from '@/utils/color-conversions/rgba8888TargetOps';
+import rgbaToArgb4444 from '@/utils/color-conversions/rgbaToArgb4444';
+import rgbaToRgb565 from '@/utils/color-conversions/rgbaToRgb565';
 
 const PTR_SIZE = 4;
 
@@ -490,3 +495,218 @@ export async function injectGenericTextureFile(
   }
   return true;
 }
+
+/**
+ * Extrae los 56 personajes de la intro arcade en DM08CHR.BIN
+ */
+export async function dumpDm08Chr(
+  chrPath: string,
+  outDir: string,
+  options: DumpOptions = {}
+): Promise<number> {
+  if (!fs.existsSync(chrPath)) return 0;
+
+  const chrBuf = fs.readFileSync(chrPath);
+  const startOffset = chrBuf.readUInt32LE(0);
+  const count = startOffset / 4;
+
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const width = 256;
+  const height = 256;
+  let exported = 0;
+
+  for (let i = 0; i < count; i++) {
+    const start = chrBuf.readUInt32LE(i * 4);
+    const end = i < count - 1 ? chrBuf.readUInt32LE((i + 1) * 4) : chrBuf.length;
+    const section = chrBuf.subarray(start, end);
+    const decomp = decompressLzssBuffer(section);
+    const sourceBuffer = Buffer.from(new Uint8Array(decomp));
+
+    const pixels = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      const yOffset = width * y;
+      const sourceY = height - 1 - y;
+      for (let x = 0; x < width; x++) {
+        const offsetDrawn = encodeZMortonPosition(x, sourceY);
+        const readOffset = offsetDrawn * 2;
+        if (readOffset + 2 <= sourceBuffer.length) {
+          const colorValue = sourceBuffer.readUInt16LE(readOffset);
+          const color = rgba8888TargetOps.ARGB4444(colorValue);
+          const canvasOffset = (yOffset + x) * 4;
+          pixels[canvasOffset] = color.r;
+          pixels[canvasOffset + 1] = color.g;
+          pixels[canvasOffset + 2] = color.b;
+          pixels[canvasOffset + 3] = color.a;
+        }
+      }
+    }
+
+    const img = new Jimp({ width, height, data: pixels });
+    const pngPath = path.join(outDir, `modnao-texture-${i}.png`);
+    await img.write(pngPath as any);
+    exported++;
+  }
+
+  if (options.verbose) {
+    console.log(`[DUMP] ${path.basename(chrPath)} -> ${exported} personajes en ${outDir}`);
+  }
+  return exported;
+}
+
+/**
+ * Reinyecta los 56 personajes modificados en DM08CHR.BIN
+ */
+export async function injectDm08Chr(
+  chrPath: string,
+  pngDir: string,
+  outChrPath: string,
+  options: InjectOptions = {}
+): Promise<boolean> {
+  if (!fs.existsSync(chrPath) || !fs.existsSync(pngDir)) return false;
+
+  const chrBuf = fs.readFileSync(chrPath);
+  const startOffset = chrBuf.readUInt32LE(0);
+  const count = startOffset / 4;
+
+  const width = 256;
+  const height = 256;
+  const compressedSections: Buffer[] = [];
+  let modifiedCount = 0;
+
+  for (let i = 0; i < count; i++) {
+    const pngPath = path.join(pngDir, `modnao-texture-${i}.png`);
+    if (fs.existsSync(pngPath)) {
+      const [pixels] = await loadPngRgba(pngPath);
+      const raw16Buf = Buffer.alloc(width * height * 2);
+
+      for (let y = 0; y < height; y++) {
+        const yOffset = width * y;
+        const sourceY = height - 1 - y;
+        for (let x = 0; x < width; x++) {
+          const offsetDrawn = encodeZMortonPosition(x, sourceY);
+          const canvasOffset = (yOffset + x) * 4;
+          const r = pixels[canvasOffset];
+          const g = pixels[canvasOffset + 1];
+          const b = pixels[canvasOffset + 2];
+          const a = pixels[canvasOffset + 3];
+          const color16 = rgbaToArgb4444(r, g, b, a);
+          raw16Buf.writeUInt16LE(color16, offsetDrawn * 2);
+        }
+      }
+
+      const compressed = compressLzssBuffer(raw16Buf);
+      compressedSections.push(Buffer.from(new Uint8Array(compressed)));
+      modifiedCount++;
+    } else {
+      const start = chrBuf.readUInt32LE(i * 4);
+      const end = i < count - 1 ? chrBuf.readUInt32LE((i + 1) * 4) : chrBuf.length;
+      compressedSections.push(chrBuf.subarray(start, end));
+    }
+  }
+
+  const pointerTableSize = count * 4;
+  const pointerBuf = Buffer.alloc(pointerTableSize);
+  let currentOffset = pointerTableSize;
+
+  for (let i = 0; i < count; i++) {
+    pointerBuf.writeUInt32LE(currentOffset, i * 4);
+    currentOffset += compressedSections[i].length;
+  }
+
+  const finalBuf = Buffer.concat([pointerBuf, ...compressedSections]);
+  fs.mkdirSync(path.dirname(outChrPath), { recursive: true });
+  fs.writeFileSync(outChrPath, finalBuf);
+
+  if (options.verbose) {
+    console.log(`[INJECT] ${path.basename(chrPath)} -> ${path.basename(outChrPath)} (${modifiedCount} personajes actualizados)`);
+  }
+  return true;
+}
+
+/**
+ * Extrae la textura de la máquina arcade de la intro en DM08CAB.BIN (512x512 RGB565)
+ */
+export async function dumpDm08Cab(
+  cabPath: string,
+  outDir: string,
+  options: DumpOptions = {}
+): Promise<number> {
+  if (!fs.existsSync(cabPath)) return 0;
+
+  const cabBuf = fs.readFileSync(cabPath);
+  const width = 512;
+  const height = 512;
+
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const pixels = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const yOffset = width * y;
+    const sourceY = height - 1 - y;
+    for (let x = 0; x < width; x++) {
+      const offsetDrawn = encodeZMortonPosition(x, sourceY);
+      const readOffset = offsetDrawn * 2;
+      if (readOffset + 2 <= cabBuf.length) {
+        const colorValue = cabBuf.readUInt16LE(readOffset);
+        const color = rgba8888TargetOps.RGB565(colorValue);
+        const canvasOffset = (yOffset + x) * 4;
+        pixels[canvasOffset] = color.r;
+        pixels[canvasOffset + 1] = color.g;
+        pixels[canvasOffset + 2] = color.b;
+        pixels[canvasOffset + 3] = color.a;
+      }
+    }
+  }
+
+  const img = new Jimp({ width, height, data: pixels });
+  const pngPath = path.join(outDir, `modnao-texture-0.png`);
+  await img.write(pngPath as any);
+
+  if (options.verbose) {
+    console.log(`[DUMP] ${path.basename(cabPath)} -> 1 textura en ${outDir}`);
+  }
+  return 1;
+}
+
+/**
+ * Reinyecta la textura de la máquina arcade en DM08CAB.BIN
+ */
+export async function injectDm08Cab(
+  cabPath: string,
+  pngDir: string,
+  outCabPath: string,
+  options: InjectOptions = {}
+): Promise<boolean> {
+  const pngPath = path.join(pngDir, `modnao-texture-0.png`);
+  if (!fs.existsSync(pngPath)) return false;
+
+  const [pixels] = await loadPngRgba(pngPath);
+  const width = 512;
+  const height = 512;
+  const raw16Buf = Buffer.alloc(width * height * 2);
+
+  for (let y = 0; y < height; y++) {
+    const yOffset = width * y;
+    const sourceY = height - 1 - y;
+    for (let x = 0; x < width; x++) {
+      const offsetDrawn = encodeZMortonPosition(x, sourceY);
+      const canvasOffset = (yOffset + x) * 4;
+      const r = pixels[canvasOffset];
+      const g = pixels[canvasOffset + 1];
+      const b = pixels[canvasOffset + 2];
+      const a = pixels[canvasOffset + 3];
+      const color16 = rgbaToRgb565(r, g, b, a);
+      raw16Buf.writeUInt16LE(color16, offsetDrawn * 2);
+    }
+  }
+
+  fs.mkdirSync(path.dirname(outCabPath), { recursive: true });
+  fs.writeFileSync(outCabPath, raw16Buf);
+
+  if (options.verbose) {
+    console.log(`[INJECT] DM08CAB.BIN -> ${path.basename(outCabPath)} (1 textura actualizada)`);
+  }
+  return true;
+}
+

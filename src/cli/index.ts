@@ -7,7 +7,11 @@ import {
   dumpCharacterFac,
   injectCharacterFac,
   dumpGenericTextureFile,
-  injectGenericTextureFile
+  injectGenericTextureFile,
+  dumpDm08Chr,
+  injectDm08Chr,
+  dumpDm08Cab,
+  injectDm08Cab
 } from './mvc2TextureManager';
 
 const SCRIPT_DIR = __dirname;
@@ -70,6 +74,26 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
           totalTextures += count;
         }
       }
+    }
+  }
+
+  // 2b. Personajes de la Intro Arcade (DM08CHR.BIN y DM08CAB.BIN)
+  const dm08ChrPath = path.join(mvc2Dir, 'DM08CHR.BIN');
+  if (fs.existsSync(dm08ChrPath)) {
+    const chrOut = path.join(demosDir, 'DM08CHR');
+    const count = await dumpDm08Chr(dm08ChrPath, chrOut, { verbose: true });
+    if (count > 0) {
+      totalFiles++;
+      totalTextures += count;
+    }
+  }
+  const dm08CabPath = path.join(mvc2Dir, 'DM08CAB.BIN');
+  if (fs.existsSync(dm08CabPath)) {
+    const cabOut = path.join(demosDir, 'DM08CAB');
+    const count = await dumpDm08Cab(dm08CabPath, cabOut, { verbose: true });
+    if (count > 0) {
+      totalFiles++;
+      totalTextures += count;
     }
   }
 
@@ -166,7 +190,15 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
       const pngFolder = path.join(demosDir, folder);
       const destTexPath = path.join(outMvc2Dir, texName);
 
-      if (fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
+      if (folder === 'DM08CHR') {
+        const chrPath = path.join(mvc2Dir, 'DM08CHR.BIN');
+        const destChrPath = path.join(outMvc2Dir, 'DM08CHR.BIN');
+        await injectDm08Chr(chrPath, pngFolder, destChrPath, { verbose: true });
+      } else if (folder === 'DM08CAB') {
+        const cabPath = path.join(mvc2Dir, 'DM08CAB.BIN');
+        const destCabPath = path.join(outMvc2Dir, 'DM08CAB.BIN');
+        await injectDm08Cab(cabPath, pngFolder, destCabPath, { verbose: true });
+      } else if (fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
         await injectPolTexPair(polPath, origTexPath, pngFolder, destTexPath, { verbose: true });
       }
     }
