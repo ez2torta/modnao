@@ -4,6 +4,10 @@ import encodeZMortonRectanglePosition from '@/utils/textures/parse/encodeZMorton
 import decompressLzssBuffer from '@/utils/data/decompressLzssBuffer';
 import rgba8888TargetOps from '@/utils/color-conversions/rgba8888TargetOps';
 import decompressVqBuffer from '@/utils/data/decompressVqBuffer';
+import getMipmapOffset, {
+  TWIDDLED_MIPMAP_TEXTURE_ENCODE_TYPE,
+  VQ_MIPMAP_TEXTURE_ENCODE_TYPE
+} from '@/utils/textures/getMipmapOffset';
 import getTextureDefDataLength from '@/utils/textures/getTextureDefDataLength';
 import {
   RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE,
@@ -47,10 +51,18 @@ function createTexturePixelBuffers(
 
   textureDefs.forEach((t) => {
     const realLocation = t.baseLocation - t.ramOffset;
-    const isVqTexture = t.type === VQ_TEXTURE_ENCODE_TYPE;
+    const isVqTexture =
+      t.type === VQ_TEXTURE_ENCODE_TYPE ||
+      t.type === VQ_MIPMAP_TEXTURE_ENCODE_TYPE;
+    const isTwiddledMipmapTexture =
+      t.type === TWIDDLED_MIPMAP_TEXTURE_ENCODE_TYPE;
     const isRectangleTwiddledTexture =
       t.type === RECTANGULAR_TWIDDLED_TEXTURE_ENCODE_TYPE;
     const textureBufferLength = getTextureDefDataLength(t);
+    const mipmapOffset = isTwiddledMipmapTexture
+      ? getMipmapOffset(t.width, t.height, false)
+      : 0;
+
     const sourceBuffer = !isVqTexture
       ? fileBuffer
       : decompressVqBuffer(
@@ -58,7 +70,7 @@ function createTexturePixelBuffers(
           t.width,
           t.height
         );
-    const sourceLocation = !isVqTexture ? realLocation : 0;
+    const sourceLocation = !isVqTexture ? realLocation + mipmapOffset : 0;
 
     for (const type of urlTypes) {
       const sharedPixelBuffer = new SharedArrayBuffer(t.width * t.height * 4);
