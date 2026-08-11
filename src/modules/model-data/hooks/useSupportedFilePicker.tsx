@@ -183,6 +183,7 @@ export const handleFileInput = async (
     case 'mvc2-font-file':
     case 'mvc2-selection-vmu-jp':
     case 'mvc2-selection-vmu-us':
+    case 'mvc2-demo-dm08cab':
       dispatch(
         loadTextureFile({
           file: selectedTextureFile,
