@@ -591,7 +591,7 @@ export async function injectDm08Chr(
           const g = pixels[canvasOffset + 1];
           const b = pixels[canvasOffset + 2];
           const a = pixels[canvasOffset + 3];
-          const color16 = rgbaToArgb4444(r, g, b, a);
+          const color16 = rgbaToArgb4444({ r, g, b, a });
           raw16Buf.writeUInt16LE(color16, offsetDrawn * 2);
         }
       }
