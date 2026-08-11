@@ -31,11 +31,35 @@ function findFile(dir: string, filename: string): string | null {
   return null;
 }
 
-async function dumpAll(mvc2Dir: string, outBaseDir: string) {
+function parseFilterList(filterInput?: string | string[]): string[] | null {
+  if (!filterInput) return null;
+  const raw = Array.isArray(filterInput) ? filterInput.join(',') : filterInput;
+  const items = raw
+    .split(/[,;\s]+/)
+    .map((s) => s.trim().toUpperCase().replace(/\.BIN$/i, ''))
+    .filter(Boolean);
+  return items.length > 0 ? items : null;
+}
+
+function matchesFilter(name: string, filterList: string[] | null): boolean {
+  if (!filterList || filterList.length === 0) return true;
+  const clean = name.toUpperCase().replace(/\.BIN$/i, '');
+  return filterList.some((f) => {
+    const fClean = f.replace(/TEX$/i, '');
+    const cleanNoTex = clean.replace(/TEX$/i, '');
+    return clean === f || cleanNoTex === fClean || clean.includes(f) || f.includes(clean);
+  });
+}
+
+async function dumpAll(mvc2Dir: string, outBaseDir: string, filterInput?: string | string[]) {
+  const filterList = parseFilterList(filterInput);
   console.log(`=======================================================`);
-  console.log(`  MVC2 Texture Extractor (DUMP ALL)`);
+  console.log(`  MVC2 Texture Extractor (DUMP)`);
   console.log(`  Origen : ${mvc2Dir}`);
   console.log(`  Destino: ${outBaseDir}`);
+  if (filterList) {
+    console.log(`  Filtro : ${filterList.join(', ')}`);
+  }
   console.log(`=======================================================\n`);
 
   if (!fs.existsSync(mvc2Dir)) {
@@ -54,6 +78,7 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   const stagesDir = path.join(outBaseDir, 'Stages');
   for (const file of files) {
     if (/^STG[0-9A-Z]{2}TEX\.BIN$/i.test(file)) {
+      if (!matchesFilter(file, filterList)) continue;
       const polFile = file.replace(/TEX\.BIN$/i, 'POL.BIN');
       const polPath = findFile(mvc2Dir, polFile);
       const texPath = path.join(mvc2Dir, file);
@@ -74,6 +99,7 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   const demosDir = path.join(outBaseDir, 'Demos');
   for (const file of files) {
     if (/^(DM[0-9A-Z]{2}|EFKY)TEX\.BIN$/i.test(file)) {
+      if (!matchesFilter(file, filterList)) continue;
       const polFile = file.replace(/TEX\.BIN$/i, 'POL.BIN');
       const polPath = findFile(mvc2Dir, polFile);
       const texPath = path.join(mvc2Dir, file);
@@ -90,22 +116,26 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   }
 
   // 2b. Personajes de la Intro Arcade (DM08CHR.BIN y DM08CAB.BIN)
-  const dm08ChrPath = findFile(mvc2Dir, 'DM08CHR.BIN');
-  if (dm08ChrPath && fs.existsSync(dm08ChrPath)) {
-    const chrOut = path.join(demosDir, 'DM08CHR');
-    const count = await dumpDm08Chr(dm08ChrPath, chrOut, { verbose: true });
-    if (count > 0) {
-      totalFiles++;
-      totalTextures += count;
+  if (matchesFilter('DM08CHR', filterList)) {
+    const dm08ChrPath = findFile(mvc2Dir, 'DM08CHR.BIN');
+    if (dm08ChrPath && fs.existsSync(dm08ChrPath)) {
+      const chrOut = path.join(demosDir, 'DM08CHR');
+      const count = await dumpDm08Chr(dm08ChrPath, chrOut, { verbose: true });
+      if (count > 0) {
+        totalFiles++;
+        totalTextures += count;
+      }
     }
   }
-  const dm08CabPath = findFile(mvc2Dir, 'DM08CAB.BIN');
-  if (dm08CabPath && fs.existsSync(dm08CabPath)) {
-    const cabOut = path.join(demosDir, 'DM08CAB');
-    const count = await dumpDm08Cab(dm08CabPath, cabOut, { verbose: true });
-    if (count > 0) {
-      totalFiles++;
-      totalTextures += count;
+  if (matchesFilter('DM08CAB', filterList)) {
+    const dm08CabPath = findFile(mvc2Dir, 'DM08CAB.BIN');
+    if (dm08CabPath && fs.existsSync(dm08CabPath)) {
+      const cabOut = path.join(demosDir, 'DM08CAB');
+      const count = await dumpDm08Cab(dm08CabPath, cabOut, { verbose: true });
+      if (count > 0) {
+        totalFiles++;
+        totalTextures += count;
+      }
     }
   }
 
@@ -115,6 +145,7 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   for (const file of files) {
     // FAC
     if (/^PL[0-9A-Z]{2}_FAC\.BIN$/i.test(file)) {
+      if (!matchesFilter(file, filterList)) continue;
       const facPath = path.join(mvc2Dir, file);
       const facOut = path.join(portraitsDir, file.replace(/\.BIN$/i, ''));
       const count = await dumpCharacterFac(facPath, facOut, { verbose: true });
@@ -125,6 +156,7 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
     }
     // WIN
     if (/^PL[0-9A-Z]{2}_WIN\.BIN$/i.test(file)) {
+      if (!matchesFilter(file, filterList)) continue;
       const winPath = path.join(mvc2Dir, file);
       const winOut = path.join(portraitsDir, file.replace(/\.BIN$/i, ''));
       const count = await dumpGenericTextureFile(winPath, winOut, { verbose: true });
@@ -140,6 +172,7 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   const menusDir = path.join(outBaseDir, 'Menus');
   const menuFiles = ['SELSTG.BIN', 'SELTEX.BIN', 'SELVMJ.BIN', 'SELVMU.BIN', 'ENDDCTEX.BIN', 'ENDNMTEX.BIN'];
   for (const file of menuFiles) {
+    if (!matchesFilter(file, filterList)) continue;
     const binPath = findFile(mvc2Dir, file);
     if (binPath && fs.existsSync(binPath)) {
       const menuOut = path.join(menusDir, file.replace(/\.BIN$/i, ''));
@@ -152,19 +185,23 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   }
 
   console.log(`\n=======================================================`);
-  console.log(`[✓] ¡Extracción masiva completada!`);
+  console.log(`[✓] Extracción completada.`);
   console.log(`    Archivos procesados: ${totalFiles}`);
   console.log(`    Texturas PNG generadas: ${totalTextures}`);
   console.log(`    Carpeta de salida: ${outBaseDir}`);
   console.log(`=======================================================`);
 }
 
-async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: string) {
+async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: string, filterInput?: string | string[]) {
+  const filterList = parseFilterList(filterInput);
   console.log(`=======================================================`);
-  console.log(`  MVC2 Texture Injector (REPACK ALL)`);
+  console.log(`  MVC2 Texture Injector (REPACK)`);
   console.log(`  Carpeta de PNGs: ${inputBaseDir}`);
   console.log(`  Plantilla Base : ${mvc2Dir}`);
   console.log(`  Destino BINs   : ${outMvc2Dir}`);
+  if (filterList) {
+    console.log(`  Filtro         : ${filterList.join(', ')}`);
+  }
   console.log(`=======================================================\n`);
 
   if (!fs.existsSync(inputBaseDir)) {
@@ -178,6 +215,7 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   const stagesDir = path.join(inputBaseDir, 'Stages');
   if (fs.existsSync(stagesDir)) {
     for (const folder of fs.readdirSync(stagesDir)) {
+      if (!matchesFilter(folder, filterList)) continue;
       const texName = `${folder}.BIN`;
       const polName = texName.replace(/TEX\.BIN$/i, 'POL.BIN');
       const polPath = findFile(mvc2Dir, polName);
@@ -195,6 +233,7 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   const demosDir = path.join(inputBaseDir, 'Demos');
   if (fs.existsSync(demosDir)) {
     for (const folder of fs.readdirSync(demosDir)) {
+      if (!matchesFilter(folder, filterList)) continue;
       const texName = `${folder}.BIN`;
       const polName = texName.replace(/TEX\.BIN$/i, 'POL.BIN');
       const polPath = findFile(mvc2Dir, polName);
@@ -220,6 +259,7 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   const portraitsDir = path.join(inputBaseDir, 'Characters');
   if (fs.existsSync(portraitsDir)) {
     for (const folder of fs.readdirSync(portraitsDir)) {
+      if (!matchesFilter(folder, filterList)) continue;
       const fileName = `${folder}.BIN`;
       const origPath = findFile(mvc2Dir, fileName);
       const pngFolder = path.join(portraitsDir, folder);
@@ -239,6 +279,7 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   const menusDir = path.join(inputBaseDir, 'Menus');
   if (fs.existsSync(menusDir)) {
     for (const folder of fs.readdirSync(menusDir)) {
+      if (!matchesFilter(folder, filterList)) continue;
       const fileName = `${folder}.BIN`;
       const origPath = findFile(mvc2Dir, fileName);
       const pngFolder = path.join(menusDir, folder);
@@ -251,7 +292,7 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   }
 
   console.log(`\n=======================================================`);
-  console.log(`[✓] ¡Inyección completada!`);
+  console.log(`[✓] Inyección completada.`);
   console.log(`    Archivos .BIN guardados en: ${outMvc2Dir}`);
   console.log(`=======================================================`);
 }
@@ -265,7 +306,8 @@ async function main() {
     case 'export': {
       const mvc2Dir = args[1] ? path.resolve(process.cwd(), args[1]) : DEFAULT_MVC2_DIR;
       const outDir = args[2] ? path.resolve(process.cwd(), args[2]) : DEFAULT_TEXTURES_DUMP_DIR;
-      await dumpAll(mvc2Dir, outDir);
+      const filter = args[3] || process.env.ONLY || process.env.FILES || process.env.NAMES;
+      await dumpAll(mvc2Dir, outDir, filter);
       break;
     }
     case 'inject':
@@ -273,7 +315,8 @@ async function main() {
       const pngDir = args[1] ? path.resolve(process.cwd(), args[1]) : DEFAULT_TEXTURES_DUMP_DIR;
       const mvc2Dir = args[2] ? path.resolve(process.cwd(), args[2]) : DEFAULT_MVC2_DIR;
       const outMvc2Dir = args[3] ? path.resolve(process.cwd(), args[3]) : DEFAULT_MVC2_DIR;
-      await injectAll(pngDir, mvc2Dir, outMvc2Dir);
+      const filter = args[4] || process.env.ONLY || process.env.FILES || process.env.NAMES;
+      await injectAll(pngDir, mvc2Dir, outMvc2Dir, filter);
       break;
     }
     case 'dump-file': {
