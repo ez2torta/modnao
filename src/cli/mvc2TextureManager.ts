@@ -607,15 +607,22 @@ export async function injectDm08Chr(
   }
 
   const pointerTableSize = count * 4;
-  const pointerBuf = Buffer.alloc(pointerTableSize);
-  let currentOffset = pointerTableSize;
+  const pointerTableAligned = (pointerTableSize + 31) & ~31;
+  const pointerBuf = Buffer.alloc(pointerTableAligned, 0);
+  let currentOffset = pointerTableAligned;
 
+  const paddedSections: Buffer[] = [];
   for (let i = 0; i < count; i++) {
     pointerBuf.writeUInt32LE(currentOffset, i * 4);
-    currentOffset += compressedSections[i].length;
+    const sec = compressedSections[i];
+    const rem = sec.length % 32;
+    const padLen = rem === 0 ? 0 : 32 - rem;
+    const paddedSec = padLen === 0 ? sec : Buffer.concat([sec, Buffer.alloc(padLen, 0)]);
+    paddedSections.push(paddedSec);
+    currentOffset += paddedSec.length;
   }
 
-  const finalBuf = Buffer.concat([pointerBuf, ...compressedSections]);
+  const finalBuf = Buffer.concat([pointerBuf, ...paddedSections]);
   fs.mkdirSync(path.dirname(outChrPath), { recursive: true });
   fs.writeFileSync(outChrPath, finalBuf);
 
