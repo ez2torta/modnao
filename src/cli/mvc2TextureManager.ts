@@ -192,11 +192,11 @@ export async function dumpCharacterFac(
   sections.push(Buffer.from(new Uint8Array(jpLifebar)));
 
   const [vq1Lzss] = decompressLzssSection(buffer, ogPointers[1], ogPointers[2]);
-  const vq1Image = decompressVqBuffer(vq1Lzss, 256, 256);
+  const vq1Image = decompressVqBuffer(Buffer.from(new Uint8Array(vq1Lzss)), 256, 256);
   sections.push(Buffer.from(new Uint8Array(vq1Image)));
 
   const [vq2Lzss, compressedVq2Buffer] = decompressLzssSection(buffer, ogPointers[2], ogPointers?.[3]);
-  const vq2Image = decompressVqBuffer(vq2Lzss, 128, 128);
+  const vq2Image = decompressVqBuffer(Buffer.from(new Uint8Array(vq2Lzss)), 128, 128);
   sections.push(Buffer.from(new Uint8Array(vq2Image)));
 
   const [usLifebar] = ogPointers.length <= 3 ? [undefined, undefined] : decompressLzssSection(buffer, ogPointers[3]);
@@ -290,11 +290,11 @@ export async function injectCharacterFac(
   sections.push(Buffer.from(new Uint8Array(jpLifebar)));
 
   const [vq1Lzss] = decompressLzssSection(buffer, ogPointers[1], ogPointers[2]);
-  const vq1Image = decompressVqBuffer(vq1Lzss, 256, 256);
+  const vq1Image = decompressVqBuffer(Buffer.from(new Uint8Array(vq1Lzss)), 256, 256);
   sections.push(Buffer.from(new Uint8Array(vq1Image)));
 
   const [vq2Lzss, compressedVq2Buffer] = decompressLzssSection(buffer, ogPointers[2], ogPointers?.[3]);
-  const vq2Image = decompressVqBuffer(vq2Lzss, 128, 128);
+  const vq2Image = decompressVqBuffer(Buffer.from(new Uint8Array(vq2Lzss)), 128, 128);
   sections.push(Buffer.from(new Uint8Array(vq2Image)));
 
   const [usLifebar] = ogPointers.length <= 3 ? [undefined, undefined] : decompressLzssSection(buffer, ogPointers[3]);
@@ -591,7 +591,7 @@ export async function injectDm08Chr(
           const g = pixels[canvasOffset + 1];
           const b = pixels[canvasOffset + 2];
           const a = pixels[canvasOffset + 3];
-          const color16 = rgbaToArgb4444(r, g, b, a);
+          const color16 = rgbaToArgb4444({ r, g, b, a });
           raw16Buf.writeUInt16LE(color16, offsetDrawn * 2);
         }
       }
