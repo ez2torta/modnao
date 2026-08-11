@@ -21,7 +21,12 @@ export const setupStore = (preloadedState?: AppState) =>
     preloadedState,
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().prepend(objectViewerListenerMiddleware.middleware),
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: ['errorMessages/showError'],
+          ignoredPaths: ['errorMessages.messages']
+        }
+      }).prepend(objectViewerListenerMiddleware.middleware),
     devTools: process.env.NODE_ENV === 'development'
   });
 

@@ -16,7 +16,8 @@ export default function getQuantizeOptions(
     },
     'cvs2-console-menu': { dithering: false, colors: 512 },
     'mvc2-selection-textures': { dithering: false, colors: 504 },
-    'mvc2-character-win': { dithering: false, colors: 256 }
+    'mvc2-character-win': { dithering: false, colors: 256 },
+    'mvc2-demo-dm08cab': { dithering: false, colors: 32768 }
   };
   return optionsMap?.[textureFileType];
 }
