@@ -252,6 +252,35 @@ const resourceAttribMappings: Record<ResourceHashKey, ResourceAttribs> = {
       })
     ]
   },
+  'mvc2-demo-dm08cab': {
+    game: 'MVC2',
+    name: 'Arcade Intro - Cable & Ruby Heart',
+    identifier: 'DM08CAB',
+    resourceType: 'mvc2-menu',
+    filenamePattern: '^DM08CAB(.mn)?.BIN$',
+    polygonMapped: false,
+    oobReferencable: false,
+    textureFileType: 'mvc2-demo-dm08cab',
+    hasLzssTextureFile: false,
+    textureShapesMap: [
+      createTextureDef({
+        width: 512,
+        height: 512,
+        colorFormat: 'ARGB1555',
+        colorFormatValue: 0,
+        type: 1,
+        baseLocation: 0
+      }),
+      createTextureDef({
+        width: 512,
+        height: 512,
+        colorFormat: 'ARGB1555',
+        colorFormatValue: 0,
+        type: 1,
+        baseLocation: 512 * 512 * 2
+      })
+    ]
+  },
   'mvc2-font-file': {
     game: 'MVC2',
     name: 'Font Textures',
