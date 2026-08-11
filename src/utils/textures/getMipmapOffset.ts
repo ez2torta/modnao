@@ -21,12 +21,10 @@ export default function getMipmapOffset(
   if (!isVq) {
     // Para texturas de 16-bit en PowerVR Katana:
     // Los niveles 1x1, 2x2, ... (W/2)x(H/2) ocupan exactamente:
-    // ((width * height - 4) / 3) * 2 + 24 bytes
-    const count = Math.floor((width * height - 4) / 3);
-    return count * 2 + 24;
+    // sum_{k=0}^{n-1} 4^k * 2 = ((width * height - 1) / 3) * 2 bytes
+    return Math.floor((width * height - 1) / 3) * 2;
   }
 
-  // En VQ los mipmaps previos son índices de 1 byte
-  const count = Math.floor((width * height - 4) / 3);
-  return Math.floor(count / 4) + 6;
+  // En VQ los mipmaps previos son índices de 1 byte (1x1 y 2x2 comparten 1 bloque de 2x2)
+  return 1 + Math.floor((Math.floor((width * height) / 4) - 1) / 3);
 }
