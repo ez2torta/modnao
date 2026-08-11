@@ -1,167 +1,148 @@
-import LinkedList, { ListNode } from '@/utils/ds/LinkedList';
-
 const WORD_SIZE = 2;
-
-/** starts at MSB and right-shifted using chunk to indicate compression ops */
 const COMPRESSION_FLAG = 0b1000_0000_0000_0000;
+const W16_MAX_LOOKBACK = 2047;
 
-/** in 16 bit mode, can look back a max of 11 bits */
-const W16_MAX_LOOKBACK = 0b111_1111_1111;
+type LzssOp =
+  | { type: 'raw'; word: number }
+  | { type: 'match'; back: number; length: number }
+  | { type: 'esc' };
 
-/** @param buffer decompressed buffer to compress */
-export default function compressLzssBuffer(buffer: Uint8Array) {
-  let i = 0;
-
-  // create a structure that maps sequences of word ops
-
-  // also generate occurence maps for each word
-  // to grab a linked list of indexes where it occurs
-
+/**
+ * Compresses raw decompressed buffer into Capcom MvC2 LZSS format.
+ *
+ * Capcom LZSS Specification:
+ * - 16-bit word tokens
+ * - Lookback window: up to 2047 words
+ * - Bitmask word per 16 chunks: bit=0 -> raw 16-bit word, bit=1 -> compressed token
+ * - 16-bit token (length 2..31): (length << 11) | wordsBackCount (upper 5 bits non-zero)
+ * - 32-bit token (length >= 32): Word 1 = wordsBackCount (upper 5 bits are 0), Word 2 = length
+ * - Escape code: bit=1, word = 0x0000
+ */
+export default function compressLzssBuffer(bufferPassed: Uint8Array | Buffer): Uint8Array {
+  const buffer = Buffer.isBuffer(bufferPassed) ? bufferPassed : Buffer.from(bufferPassed);
   const wordCount = buffer.length / WORD_SIZE;
-  const values: (number | [number, number])[] = [];
+  const words: number[] = new Array(wordCount);
+
+  for (let idx = 0; idx < wordCount; idx++) {
+    words[idx] = buffer.readUInt16LE(idx * WORD_SIZE);
+  }
+
+  const values: LzssOp[] = [];
   const bitmasks: number[] = [];
-
-  /**
-   * tracks word occurences at indexes
-   */
-  const wordOccurences: Map<number, LinkedList<number>> = new Map();
-
-  let chunk = 0;
   let bitmask = 0;
+  let chunk = 0;
 
+  // Map each 16-bit word to its recent indices
+  const posMap: Map<number, number[]> = new Map();
+
+  let i = 0;
   while (i < wordCount) {
-    const word = buffer[i * WORD_SIZE] | (buffer[i * WORD_SIZE + 1] << 8);
+    const w = words[i];
+    let bestLen = 0;
+    let bestPos = -1;
 
-    // add word occurence
-    if (!wordOccurences.get(word)) {
-      wordOccurences.set(word, new LinkedList<number>());
-    }
-
-    const occurenceList = wordOccurences.get(word) as LinkedList<number>;
-
-    occurenceList.append(i);
-    // clean up occurences not within targeted range
-    while (
-      occurenceList.head &&
-      occurenceList.head.data + 1 <= i - W16_MAX_LOOKBACK
-    ) {
-      if (occurenceList.head.next === null) {
-        break;
+    let positions = posMap.get(w);
+    if (positions) {
+      // Retain only positions within sliding window [i - W16_MAX_LOOKBACK, i)
+      const minPos = i - W16_MAX_LOOKBACK;
+      let startIdx = 0;
+      while (startIdx < positions.length && positions[startIdx] < minPos) {
+        startIdx++;
+      }
+      if (startIdx > 0) {
+        positions = positions.slice(startIdx);
+        posMap.set(w, positions);
       }
 
-      occurenceList.advanceHead();
-    }
+      for (let pIdx = 0; pIdx < positions.length; pIdx++) {
+        const p = positions[pIdx];
+        const back = i - p;
+        let matchLen = 0;
 
-    let sequenceNode: ListNode<number> | null =
-      occurenceList.head as ListNode<number>;
-
-    let sequenceLength = 0;
-    let sequenceIndex = -1;
-
-    while (sequenceNode) {
-      const wordsBackCount = i - sequenceNode?.data;
-      let length = 1;
-
-      // for each starting word, travel through to see
-      // if there is a matching sequence
-
-      if (sequenceNode.data < i) {
-        let hasMatch = true;
+        // Support overlapping / RLE repeats
         while (
-          hasMatch &&
-          sequenceNode.data + length + 1 < wordCount &&
-          i + length + 1 < wordCount &&
-          length + 1 < W16_MAX_LOOKBACK &&
-          // 32 bit words must have wordsBackCount satisfying
-          // criteria of being at least 2047
-          ((wordsBackCount < W16_MAX_LOOKBACK && length < 31) ||
-            wordsBackCount >= W16_MAX_LOOKBACK)
+          i + matchLen < wordCount &&
+          matchLen < 65535 &&
+          words[p + (matchLen % back)] === words[i + matchLen]
         ) {
-          const sI = (sequenceNode.data + length) * WORD_SIZE;
-          const nI = (i + length) * WORD_SIZE;
-          const sequenceWord = buffer[sI] | (buffer[sI + 1] << 8);
-          const nextWord = buffer[nI] | (buffer[nI + 1] << 8);
+          matchLen++;
+        }
 
-          if (nextWord === sequenceWord) {
-            length++;
-          } else {
-            hasMatch = false;
-          }
+        if (matchLen > bestLen) {
+          bestLen = matchLen;
+          bestPos = p;
         }
       }
+    }
 
-      if (length >= sequenceLength) {
-        sequenceIndex = sequenceNode!.data;
-        sequenceLength = length;
+    if (bestLen >= 2) {
+      bitmask |= COMPRESSION_FLAG >> chunk;
+      const back = i - bestPos;
+      values.push({ type: 'match', back, length: bestLen });
+
+      // Index words within the match
+      for (let k = 0; k < bestLen; k++) {
+        const pw = words[i + k];
+        let pList = posMap.get(pw);
+        if (!pList) {
+          pList = [];
+          posMap.set(pw, pList);
+        }
+        pList.push(i + k);
       }
 
-      sequenceNode = sequenceNode.next;
-    }
-
-    if (sequenceLength === 1) {
-      values.push(word);
+      i += bestLen;
     } else {
-      bitmask = bitmask | (COMPRESSION_FLAG >> chunk);
-      const wordsBackCount = i - sequenceIndex;
-      values.push([wordsBackCount, sequenceLength]);
+      values.push({ type: 'raw', word: w });
+      let pList = posMap.get(w);
+      if (!pList) {
+        pList = [];
+        posMap.set(w, pList);
+      }
+      pList.push(i);
+      i += 1;
     }
-
-    i += sequenceLength;
 
     chunk++;
-
     if (chunk === 16) {
       bitmasks.push(bitmask);
       bitmask = 0;
-      chunk -= 16;
+      chunk = 0;
     }
   }
 
-  bitmask = bitmask | (COMPRESSION_FLAG >> chunk);
+  // Terminate with Capcom escape sequence in the current chunk
+  bitmask |= COMPRESSION_FLAG >> chunk;
+  values.push({ type: 'esc' });
   bitmasks.push(bitmask);
 
-  chunk = 0;
-  let bitmaskIndex = 0;
-  let byteOffset = 0;
-  let outputBuffer = Buffer.alloc(buffer.length * 2);
+  const outWords: number[] = [];
+  let valIdx = 0;
 
-  for (const value of values) {
-    if (chunk === 0) {
-      const value = bitmasks[bitmaskIndex++];
-      outputBuffer.writeUInt16LE(value, byteOffset);
-      byteOffset += 2;
-    }
-
-    if (!Array.isArray(value)) {
-      outputBuffer.writeUInt16LE(value, byteOffset);
-      byteOffset += 2;
-    } else {
-      const [wordsBackCount, length] = value;
-      const is32Bit = wordsBackCount >= W16_MAX_LOOKBACK;
-
-      if (!is32Bit) {
-        outputBuffer.writeUInt16LE((length << 11) | wordsBackCount, byteOffset);
-        byteOffset += 2;
+  for (const bm of bitmasks) {
+    outWords.push(bm);
+    for (let c = 0; c < 16; c++) {
+      if (valIdx >= values.length) break;
+      const op = values[valIdx++];
+      if (op.type === 'raw') {
+        outWords.push(op.word);
+      } else if (op.type === 'esc') {
+        outWords.push(0x0000);
       } else {
-        outputBuffer.writeUInt16LE(wordsBackCount, byteOffset);
-        byteOffset += 2;
-        outputBuffer.writeUInt16LE(length, byteOffset);
-        byteOffset += 2;
+        const { back, length } = op;
+        if (length < 32) {
+          outWords.push((length << 11) | back);
+        } else {
+          outWords.push(back);
+          outWords.push(length);
+        }
       }
     }
-
-    chunk += 1;
-    chunk %= 16;
   }
 
-  let escapeWordCount = 2;
-
-  outputBuffer = outputBuffer.subarray(0, byteOffset + 2 * escapeWordCount);
-
-  while (escapeWordCount) {
-    outputBuffer.writeUInt16LE(0, byteOffset);
-    byteOffset += 2;
-    escapeWordCount--;
+  const outputBuffer = Buffer.alloc(outWords.length * 2);
+  for (let wIdx = 0; wIdx < outWords.length; wIdx++) {
+    outputBuffer.writeUInt16LE(outWords[wIdx], wIdx * 2);
   }
 
   return new Uint8Array(outputBuffer);
