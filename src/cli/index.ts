@@ -19,6 +19,18 @@ const REPO_ROOT = path.resolve(SCRIPT_DIR, '../../..');
 const DEFAULT_MVC2_DIR = path.resolve(REPO_ROOT, 'MVC2');
 const DEFAULT_TEXTURES_DUMP_DIR = path.resolve(REPO_ROOT, 'Extracted_Textures');
 
+function findFile(dir: string, filename: string): string | null {
+  const direct = path.join(dir, filename);
+  if (fs.existsSync(direct)) return direct;
+  try {
+    const list = fs.readdirSync(dir);
+    const target = filename.toLowerCase();
+    const found = list.find((f) => f.toLowerCase() === target);
+    if (found) return path.join(dir, found);
+  } catch {}
+  return null;
+}
+
 async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   console.log(`=======================================================`);
   console.log(`  MVC2 Texture Extractor (DUMP ALL)`);
@@ -43,11 +55,11 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   for (const file of files) {
     if (/^STG[0-9A-Z]{2}TEX\.BIN$/i.test(file)) {
       const polFile = file.replace(/TEX\.BIN$/i, 'POL.BIN');
-      const polPath = path.join(mvc2Dir, polFile);
+      const polPath = findFile(mvc2Dir, polFile);
       const texPath = path.join(mvc2Dir, file);
       const stageOut = path.join(stagesDir, file.replace(/\.BIN$/i, ''));
 
-      if (fs.existsSync(polPath)) {
+      if (polPath && fs.existsSync(polPath)) {
         const count = await dumpPolTexPair(polPath, texPath, stageOut, { verbose: true });
         if (count > 0) {
           totalFiles++;
@@ -63,11 +75,11 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   for (const file of files) {
     if (/^(DM[0-9A-Z]{2}|EFKY)TEX\.BIN$/i.test(file)) {
       const polFile = file.replace(/TEX\.BIN$/i, 'POL.BIN');
-      const polPath = path.join(mvc2Dir, polFile);
+      const polPath = findFile(mvc2Dir, polFile);
       const texPath = path.join(mvc2Dir, file);
       const demoOut = path.join(demosDir, file.replace(/\.BIN$/i, ''));
 
-      if (fs.existsSync(polPath)) {
+      if (polPath && fs.existsSync(polPath)) {
         const count = await dumpPolTexPair(polPath, texPath, demoOut, { verbose: true });
         if (count > 0) {
           totalFiles++;
@@ -78,8 +90,8 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   }
 
   // 2b. Personajes de la Intro Arcade (DM08CHR.BIN y DM08CAB.BIN)
-  const dm08ChrPath = path.join(mvc2Dir, 'DM08CHR.BIN');
-  if (fs.existsSync(dm08ChrPath)) {
+  const dm08ChrPath = findFile(mvc2Dir, 'DM08CHR.BIN');
+  if (dm08ChrPath && fs.existsSync(dm08ChrPath)) {
     const chrOut = path.join(demosDir, 'DM08CHR');
     const count = await dumpDm08Chr(dm08ChrPath, chrOut, { verbose: true });
     if (count > 0) {
@@ -87,8 +99,8 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
       totalTextures += count;
     }
   }
-  const dm08CabPath = path.join(mvc2Dir, 'DM08CAB.BIN');
-  if (fs.existsSync(dm08CabPath)) {
+  const dm08CabPath = findFile(mvc2Dir, 'DM08CAB.BIN');
+  if (dm08CabPath && fs.existsSync(dm08CabPath)) {
     const cabOut = path.join(demosDir, 'DM08CAB');
     const count = await dumpDm08Cab(dm08CabPath, cabOut, { verbose: true });
     if (count > 0) {
@@ -128,8 +140,8 @@ async function dumpAll(mvc2Dir: string, outBaseDir: string) {
   const menusDir = path.join(outBaseDir, 'Menus');
   const menuFiles = ['SELSTG.BIN', 'SELTEX.BIN', 'SELVMJ.BIN', 'SELVMU.BIN', 'ENDDCTEX.BIN', 'ENDNMTEX.BIN'];
   for (const file of menuFiles) {
-    const binPath = path.join(mvc2Dir, file);
-    if (fs.existsSync(binPath)) {
+    const binPath = findFile(mvc2Dir, file);
+    if (binPath && fs.existsSync(binPath)) {
       const menuOut = path.join(menusDir, file.replace(/\.BIN$/i, ''));
       const count = await dumpGenericTextureFile(binPath, menuOut, { verbose: true });
       if (count > 0) {
@@ -168,12 +180,12 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
     for (const folder of fs.readdirSync(stagesDir)) {
       const texName = `${folder}.BIN`;
       const polName = texName.replace(/TEX\.BIN$/i, 'POL.BIN');
-      const polPath = path.join(mvc2Dir, polName);
-      const origTexPath = path.join(mvc2Dir, texName);
+      const polPath = findFile(mvc2Dir, polName);
+      const origTexPath = findFile(mvc2Dir, texName);
       const pngFolder = path.join(stagesDir, folder);
       const destTexPath = path.join(outMvc2Dir, texName);
 
-      if (fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
+      if (polPath && origTexPath && fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
         await injectPolTexPair(polPath, origTexPath, pngFolder, destTexPath, { verbose: true });
       }
     }
@@ -185,20 +197,20 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
     for (const folder of fs.readdirSync(demosDir)) {
       const texName = `${folder}.BIN`;
       const polName = texName.replace(/TEX\.BIN$/i, 'POL.BIN');
-      const polPath = path.join(mvc2Dir, polName);
-      const origTexPath = path.join(mvc2Dir, texName);
+      const polPath = findFile(mvc2Dir, polName);
+      const origTexPath = findFile(mvc2Dir, texName);
       const pngFolder = path.join(demosDir, folder);
       const destTexPath = path.join(outMvc2Dir, texName);
 
       if (folder === 'DM08CHR') {
-        const chrPath = path.join(mvc2Dir, 'DM08CHR.BIN');
+        const chrPath = findFile(mvc2Dir, 'DM08CHR.BIN') || path.join(mvc2Dir, 'DM08CHR.BIN');
         const destChrPath = path.join(outMvc2Dir, 'DM08CHR.BIN');
         await injectDm08Chr(chrPath, pngFolder, destChrPath, { verbose: true });
       } else if (folder === 'DM08CAB') {
-        const cabPath = path.join(mvc2Dir, 'DM08CAB.BIN');
+        const cabPath = findFile(mvc2Dir, 'DM08CAB.BIN') || path.join(mvc2Dir, 'DM08CAB.BIN');
         const destCabPath = path.join(outMvc2Dir, 'DM08CAB.BIN');
         await injectDm08Cab(cabPath, pngFolder, destCabPath, { verbose: true });
-      } else if (fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
+      } else if (polPath && origTexPath && fs.existsSync(polPath) && fs.existsSync(origTexPath)) {
         await injectPolTexPair(polPath, origTexPath, pngFolder, destTexPath, { verbose: true });
       }
     }
@@ -209,14 +221,16 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   if (fs.existsSync(portraitsDir)) {
     for (const folder of fs.readdirSync(portraitsDir)) {
       const fileName = `${folder}.BIN`;
-      const origPath = path.join(mvc2Dir, fileName);
+      const origPath = findFile(mvc2Dir, fileName);
       const pngFolder = path.join(portraitsDir, folder);
       const destPath = path.join(outMvc2Dir, fileName);
 
-      if (/^PL[0-9A-Z]{2}_FAC$/i.test(folder)) {
-        await injectCharacterFac(origPath, pngFolder, destPath, { verbose: true });
-      } else if (/^PL[0-9A-Z]{2}_WIN$/i.test(folder)) {
-        await injectGenericTextureFile(origPath, pngFolder, destPath, { verbose: true });
+      if (origPath && fs.existsSync(origPath)) {
+        if (/^PL[0-9A-Z]{2}_FAC$/i.test(folder)) {
+          await injectCharacterFac(origPath, pngFolder, destPath, { verbose: true });
+        } else if (/^PL[0-9A-Z]{2}_WIN$/i.test(folder)) {
+          await injectGenericTextureFile(origPath, pngFolder, destPath, { verbose: true });
+        }
       }
     }
   }
@@ -226,11 +240,11 @@ async function injectAll(inputBaseDir: string, mvc2Dir: string, outMvc2Dir: stri
   if (fs.existsSync(menusDir)) {
     for (const folder of fs.readdirSync(menusDir)) {
       const fileName = `${folder}.BIN`;
-      const origPath = path.join(mvc2Dir, fileName);
+      const origPath = findFile(mvc2Dir, fileName);
       const pngFolder = path.join(menusDir, folder);
       const destPath = path.join(outMvc2Dir, fileName);
 
-      if (fs.existsSync(origPath)) {
+      if (origPath && fs.existsSync(origPath)) {
         await injectGenericTextureFile(origPath, pngFolder, destPath, { verbose: true });
       }
     }
